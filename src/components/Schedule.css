@@ -1,0 +1,465 @@
+/* Schedule Component Layout */
+.schedule-dashboard {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.schedule-dashboard::-webkit-scrollbar {
+  display: none;
+}
+
+/* Schedule Common Header */
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 16px 24px;
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  border: 1px solid #E5E7EB;
+}
+
+.schedule-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.schedule-header-breadcrumb {
+  font-weight: 400;
+  color: #6B7280;
+}
+
+.schedule-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Consultation View Specific Action */
+.complete-consultation-btn {
+  background-color: var(--color-primary-default, #00AEC0);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-family: inherit;
+}
+
+.complete-consultation-btn:hover {
+  opacity: 0.9;
+}
+
+/* Top Controls (Date / Filter) */
+.schedule-controls-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.schedule-page-title {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-page-title h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.schedule-page-title p {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0;
+}
+
+.schedule-filters {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.filter-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #F1F5F9;
+  border: none;
+  border-radius: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4B5563;
+  cursor: pointer;
+}
+
+.date-selector {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.date-nav-btn {
+  background: #F1F5F9;
+  border: none;
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #4B5563;
+  transition: all 0.2s;
+}
+
+.date-nav-btn:hover {
+  background: #E2E8F0;
+}
+
+.date-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-primary-default, #00AEC0);
+}
+
+.date-current svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Empty State */
+.schedule-empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 24px 24px 24px;
+  gap: 24px;
+}
+
+.empty-graphic {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.empty-graphic img {
+  width: 280px;
+  height: auto;
+}
+
+.empty-text-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.empty-text-container h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.empty-text-container p {
+  font-size: 13px;
+  color: #6B7280;
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+/* Grid View */
+.schedule-grid-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 0 24px 24px 24px;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.appointment-card {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.card-patient-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f2f2f2;
+}
+
+.card-patient-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-patient-text h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.card-patient-text span {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.card-status {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.card-status.completed {
+  color: #10B981;
+}
+
+.card-status.waiting {
+  color: #F59E0B;
+}
+
+.card-status.canceled {
+  color: #EF4444;
+}
+
+.card-details-row {
+  display: flex;
+  padding: 12px 0;
+  border-top: 1px dashed #E5E7EB;
+  border-bottom: 1px dashed #E5E7EB;
+}
+
+.card-detail-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.card-detail-col:first-child {
+  border-right: 1px solid #F3F4F6;
+}
+
+.card-detail-val {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.card-detail-lbl {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.card-action-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.card-action-btn.start {
+  background: var(--color-primary-default, #00AEC0);
+  color: white;
+  border: 1px solid var(--color-primary-default, #00AEC0);
+}
+
+.card-action-btn.start:hover {
+  background: #0098A8;
+}
+
+.card-action-btn.profile {
+  background: white;
+  color: var(--color-primary-default, #00AEC0);
+  border: 1px solid var(--color-primary-default, #00AEC0);
+}
+
+.card-action-btn.profile:hover {
+  background: #F0FBFC;
+}
+
+/* Extended Consultation View */
+.consultation-main-content {
+  background: white;
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.consultation-patient-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cp-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #f2f2f2;
+}
+
+.cp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cp-name-age {
+  display: flex;
+  flex-direction: column;
+}
+
+.cp-name-age h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.cp-name-age span {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.cp-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cp-tag {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.cp-tag.blue {
+  background: #E8F8F9;
+  color: #00AEC0;
+  border: 1px solid #00AEC0;
+}
+
+.cp-tag.green {
+  background: #E6F5ED;
+  color: #10B981;
+  border: 1px dashed #10B981;
+}
+
+/* Consultation Layout Grids (matches patient details panel styling basically) */
+.consultation-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.consultation-2col {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+}
+
+.consultation-full-row {
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .schedule-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .consultation-metrics-row, .consultation-2col {
+    grid-template-columns: 1fr;
+  }
+  .pd-vaccine-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .schedule-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+  }
+  .schedule-grid {
+    grid-template-columns: 1fr;
+  }
+  .schedule-controls-row {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .date-selector, .schedule-filters {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .pd-vaccine-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

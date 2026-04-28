@@ -1,0 +1,422 @@
+/* Patient Details Panel Overlay */
+.patient-details-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  animation: fadeIn 0.25s ease;
+  overflow-y: auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+.patient-details-panel {
+  width: 700px;
+  max-width: 95vw;
+  max-height: calc(100vh - 40px);
+  background: #F2F2F2;
+  border-radius: 0 24px 24px 0;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  animation: slideInLeft 0.3s ease;
+  position: fixed;
+  top: 20px;
+  left: 0;
+}
+
+/* Scrollbar styling */
+.patient-details-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.patient-details-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.patient-details-panel::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+/* Header Section */
+.pd-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+.pd-avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #E5E7EB;
+}
+
+.pd-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pd-header-info h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pd-header-info span {
+  font-size: 13px;
+  color: #6B7280;
+}
+
+.pd-close-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s;
+}
+
+.pd-close-btn:hover {
+  transform: scale(1.1);
+}
+
+.pd-close-btn img {
+  width: 32px;
+  height: 32px;
+}
+
+/* Badges */
+.pd-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.pd-gender-tag {
+  color: #00AEC0;
+  border: 1px solid #B0E3EB;
+  border-radius: 20px;
+  padding: 2px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+}
+
+.pd-status-tag {
+  color: #10B981;
+  border: 1px solid #A1DEB8;
+  border-radius: 20px;
+  padding: 2px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+}
+
+/* Health Metrics Cards */
+.pd-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.pd-metric-card {
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid #E5E7EB;
+}
+
+.pd-metric-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pd-metric-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #6B7280;
+}
+
+.pd-metric-icon {
+  width: 20px;
+  height: 20px;
+  color: #9CA3AF;
+}
+
+.pd-metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.pd-metric-sub {
+  font-size: 11px;
+  color: #10B981;
+  font-weight: 500;
+}
+
+/* Development Curve Card */
+.pd-dev-curve-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pd-dev-curve-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pd-chart-container {
+  width: 100%;
+  height: 200px;
+}
+
+.pd-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+
+.pd-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.pd-legend-dot {
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.pd-legend-dot.weight {
+  background: #00AEC0;
+}
+
+.pd-legend-dot.head {
+  background: #0B4A50;
+}
+
+.pd-legend-dot.height {
+  background: #F9A87F;
+}
+
+/* Milestones Section */
+.pd-milestones-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pd-milestones-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pd-milestones-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.pd-body-figure {
+  width: 80px;
+  height: auto;
+  flex-shrink: 0;
+}
+
+.pd-progress-list {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pd-progress-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pd-progress-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pd-progress-label {
+  font-size: 13px;
+  color: #4B5563;
+}
+
+.pd-progress-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00AEC0;
+}
+
+.pd-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: #E5E7EB;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.pd-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00AEC0 0%, #52C5C3 100%);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+/* Vaccine Log Section */
+.pd-vaccine-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  border: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pd-vaccine-card h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.pd-vaccine-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.pd-vaccine-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #F3F4F6;
+}
+
+.pd-vaccine-item.green {
+  background: #E6F5ED;
+  border-color: #E6F5ED;
+}
+
+.pd-vaccine-item.yellow {
+  background: #FFF8E6;
+  border-color: #FFF8E6;
+}
+
+.pd-vaccine-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pd-vaccine-icon.green {
+  background: #10B981;
+}
+
+.pd-vaccine-icon.yellow {
+  background: #F59E0B;
+}
+
+.pd-vaccine-icon img {
+  width: 16px;
+  height: 16px;
+}
+
+.pd-vaccine-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pd-vaccine-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pd-vaccine-name.green {
+  color: #10B981;
+}
+
+.pd-vaccine-name.yellow {
+  color: #F59E0B;
+}
+
+.pd-vaccine-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+.pd-vaccine-date svg {
+  width: 12px;
+  height: 12px;
+}

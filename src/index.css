@@ -1,0 +1,140 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+
+:root {
+  --color-primary-default: #00AEC0;
+  --color-primary-700: #007C88;
+  --color-primary-50: #E6F7F9;
+  --color-secondary-900: #1a1a1a;
+  --color-secondary-default: #4A4A4A;
+  --color-secondary-300: #E0E0E0;
+  --color-white: #FFFFFF;
+  --border-card-default: #E2E8F0;
+  --bg-card-default: #FFFFFF;
+  --color-error-default: #EF4444;
+
+  --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  --corner-radius-system-radius-xl: 24px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family);
+  background-color: #F9FAFB;
+  color: #4B5563;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: #111827;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+p {
+  color: #4B5563;
+  line-height: 1.6;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* GLOBAL UX POLISH ANIMATIONS */
+@keyframes fadeInDrop {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseSoft {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes slideInRightSoft {
+  0% { opacity: 0; transform: translateX(24px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleUpGrow {
+  0% { opacity: 0; transform: scaleY(0); transform-origin: bottom; }
+  100% { opacity: 1; transform: scaleY(1); transform-origin: bottom; }
+}
+
+/* Animate page wrapper children on mount */
+.dashboard-content-wrapper > * {
+  animation: fadeInDrop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Base interactive global rules */
+button, .kpi-card, .appointment-card, .patient-row, .pd-metric-card, .pd-vaccine-item, .pie-card, .chart-card {
+  transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.35s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+
+button:active {
+  transform: scale(0.92) !important;
+}
+
+.save-changes-btn:hover, .add-time-btn:hover, .card-action-btn:hover, .complete-consultation-btn:hover, .login-btn:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 8px 16px rgba(0, 174, 192, 0.25);
+}
+
+.kpi-card:hover, .appointment-card:hover, .patient-row:hover, .pd-metric-card:hover, .pd-vaccine-item:hover, .pie-card:hover, .chart-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(0, 174, 192, 0.2);
+  background-color: var(--color-primary-default, #00AEC0) !important;
+  border-color: var(--color-primary-default, #00AEC0) !important;
+}
+
+.kpi-card:hover *, .appointment-card:hover *, .patient-row:hover *, .pd-metric-card:hover *, .pd-vaccine-item:hover *, .pie-card:hover *, .chart-card:hover * {
+  color: white !important;
+}
+
+.kpi-card:hover .kpi-icon-wrapper {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Link cursors strictly enforced */
+.text-more, .page-btn {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.text-more {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.text-more:hover {
+  color: var(--color-primary-default);
+}
+
+.toast-popup {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111827;
+  color: white;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 14px;
+  z-index: 10000;
+  animation: fadeInDrop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
