@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dana - ضنا | Care for Your Child, Made Simple</title>
+  <meta name="description" content="Dana helps parents track growth and milestones, stay on top of vaccinations, and share updates with pediatricians—so your child gets the right care at the right time." />
+  <meta name="theme-color" content="#00aec0" />
+  <meta name="color-scheme" content="light dark" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Dana - ضنا | Care for Your Child, Made Simple" />
+  <meta property="og:description" content="Track growth and milestones, stay on top of vaccinations, and share updates with pediatricians—so your child gets the right care at the right time." />
+  <meta property="og:image" content="assets/favicon-512.png" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Dana - ضنا | Care for Your Child, Made Simple" />
+  <meta name="twitter:description" content="Track growth and milestones, stay on top of vaccinations, and share updates with pediatricians." />
+  <meta name="twitter:image" content="assets/favicon-512.png" />
+  <script>
+    document.documentElement.dataset.js = '1';
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="image" href="assets/hero-bg.webp" type="image/webp" />
+  <link rel="icon" href="assets/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/favicon-512.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+  <link rel="shortcut icon" href="assets/favicon.ico" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <div class="preloader" aria-hidden="true">
+    <div class="preloader__inner">
+      <img src="assets/logo-dark.png" alt="" class="preloader__logo" width="1592" height="790" decoding="async" />
+      <div class="preloader__spinner" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <!-- ==================== NAVIGATION ==================== -->
+  <nav class="nav" id="nav">
+    <div class="nav__inner">
+      <a href="#hero" class="nav__logo" aria-label="Go to top">
+        <img src="assets/logo-white.png" alt="Dana Logo" width="1592" height="790" />
+      </a>
+      <ul class="nav__links">
+        <li><a href="#hero" class="nav__link nav__link--active" data-i18n="nav.home">Home</a></li>
+        <li class="nav__divider" role="separator" aria-hidden="true"></li>
+        <li><a href="#about" class="nav__link" data-i18n="nav.about">About Us</a></li>
+        <li class="nav__divider" role="separator" aria-hidden="true"></li>
+        <li><a href="#why" class="nav__link" data-i18n="nav.why">Why Us</a></li>
+        <li class="nav__divider" role="separator" aria-hidden="true"></li>
+        <li><a href="#services" class="nav__link" data-i18n="nav.services">Services</a></li>
+        <li class="nav__divider" role="separator" aria-hidden="true"></li>
+        <li><a href="#faq" class="nav__link" data-i18n="nav.faq">FAQ</a></li>
+        <li class="nav__divider" role="separator" aria-hidden="true"></li>
+        <li><a href="#contact" class="nav__link" data-i18n="nav.contact">Contact Us</a></li>
+      </ul>
+      <div class="nav__right">
+        <div class="nav__actions">
+          <button class="nav__icon-btn" aria-label="Translate">
+            <img src="assets/icon-translate.svg" alt="" />
+          </button>
+          <span class="nav__action-divider"></span>
+          <button class="nav__icon-btn" aria-label="Dark mode">
+            <img src="assets/icon-moon.svg" alt="" />
+          </button>
+        </div>
+        <button class="nav__hamburger" aria-label="Open menu" aria-expanded="false">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ==================== HERO SECTION ==================== -->
+  <section class="hero">
+    <div class="hero__bg">
+      <picture class="hero__gradient">
+        <source srcset="assets/hero-bg.webp" type="image/webp" />
+        <img src="assets/hero-bg.png" alt="" width="1024" height="588" fetchpriority="high" decoding="async" />
+      </picture>
+    </div>
+
+    <div class="hero__content" id="hero">
+      <h1 class="hero__title" data-i18n-html="hero.title">
+        The Complete <span class="text-secondary">Ecosystem</span> for
+        <br />Your Child's Health
+      </h1>
+      <p class="hero__subtitle" data-i18n="hero.subtitle">
+        Track growth and milestones, stay on top of vaccinations, and share updates with pediatricians—so you can feel confident, every step of the way.
+      </p>
+      <div class="hero__buttons">
+        <a href="#contact" class="btn btn--secondary">
+          <span data-i18n="hero.download">Download the App</span>
+          <span class="btn__icon btn__icon--secondary">
+            <img src="assets/arrow-left-white.svg" alt="" class="btn__arrow" />
+          </span>
+        </a>
+        <a href="#contact" class="btn btn--outline">
+          <span data-i18n="hero.joinDoctor">Join as a Doctor</span>
+          <span class="btn__icon btn__icon--outline">
+            <img src="assets/arrow-left-orange.svg" alt="" class="btn__arrow" />
+          </span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== ABOUT SECTION ==================== -->
+  <section class="about reveal" id="about">
+    <div class="about__content">
+      <span class="section-label" data-i18n="about.label">About us</span>
+      <h2 class="about__title" data-i18n-html="about.title">
+        More Than an App...<br />
+        A Partner in Your Child's Journey.
+      </h2>
+      <div class="about__text">
+        <p data-i18n="about.text1">Dana is the smart link between everyday parenting at home and expert diagnosis at the clinic.</p>
+        <p data-i18n="about.text2">An integrated ecosystem designed to empower families with proactive tracking, and equip doctors with real-time data for a healthier future.</p>
+      </div>
+      <div class="about__stats">
+        <div class="stat-card">
+          <p class="stat-card__number" data-i18n-html="about.stat1.number">12 <span class="stat-card__unit">Years</span></p>
+          <p class="stat-card__label" data-i18n="about.stat1.label">Tracked growth</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-card__number" data-i18n-html="about.stat2.number">15+ <span class="stat-card__unit">Milestones</span></p>
+          <p class="stat-card__label" data-i18n="about.stat2.label">Tracked growth milestones</p>
+        </div>
+        <div class="stat-card">
+          <p class="stat-card__number" data-i18n-html="about.stat3.number">1 <span class="stat-card__unit">Unified Record</span></p>
+          <p class="stat-card__label" data-i18n="about.stat3.label">Unified medical file.</p>
+        </div>
+      </div>
+    </div>
+    <div class="about__visual">
+      <div class="about__shape">
+        <div class="about__shape-block-1"></div>
+        <div class="about__shape-block-2"></div>
+      </div>
+      <div class="about__shape-accent"></div>
+      <picture class="about__phone">
+        <source srcset="assets/iphone-mockup.webp" type="image/webp" />
+        <img src="assets/iphone-mockup.png" alt="Dana App Preview" width="3840" height="3551" loading="lazy" decoding="async" />
+      </picture>
+    </div>
+  </section>
+
+  <!-- ==================== WHY DANA SECTION ==================== -->
+  <section class="why reveal" id="why">
+    <div class="why__header reveal" data-reveal-delay="0">
+      <span class="section-label" data-i18n="why.label">Why Dana?</span>
+      <h2 class="section-heading" data-i18n="why.heading">One Ecosystem... Unmatched Care.</h2>
+    </div>
+    <div class="why__cards reveal" data-reveal-delay="120">
+      <div class="feature-card reveal" data-reveal-delay="0">
+        <div class="feature-card__icon">
+          <img src="assets/icon-tracking.svg" alt="" />
+        </div>
+        <div class="feature-card__text">
+          <h3 class="feature-card__title" data-i18n="why.card1.title">Precise Tracking</h3>
+          <p class="feature-card__desc" data-i18n="why.card1.desc">We monitor your child's growth and milestones step-by-step for healthy development.</p>
+        </div>
+      </div>
+      <div class="feature-card reveal" data-reveal-delay="80">
+        <div class="feature-card__icon">
+          <img src="assets/icon-record.svg" alt="" />
+        </div>
+        <div class="feature-card__text">
+          <h3 class="feature-card__title" data-i18n="why.card2.title">Unified Record</h3>
+          <p class="feature-card__desc" data-i18n="why.card2.desc">A medical file with vaccines and history, accessible to doctors.</p>
+        </div>
+      </div>
+      <div class="feature-card reveal" data-reveal-delay="160">
+        <div class="feature-card__icon">
+          <img src="assets/icon-management.svg" alt="" />
+        </div>
+        <div class="feature-card__text">
+          <h3 class="feature-card__title" data-i18n="why.card3.title">Smart Management</h3>
+          <p class="feature-card__desc" data-i18n="why.card3.desc">A dashboard that simplifies scheduling and follow-ups for clinics.</p>
+        </div>
+      </div>
+      <div class="feature-card reveal" data-reveal-delay="240">
+        <div class="feature-card__icon">
+          <img src="assets/icon-secure.svg" alt="" />
+        </div>
+        <div class="feature-card__text">
+          <h3 class="feature-card__title" data-i18n="why.card4.title">Secure Care</h3>
+          <p class="feature-card__desc" data-i18n="why.card4.desc">A trusted, private environment connecting families with top pediatric specialists safely.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== SERVICES SECTION ==================== -->
+  <section class="services reveal" id="services">
+    <div class="services__bg">
+      <picture class="services__gradient">
+        <source srcset="assets/gradient-services.webp" type="image/webp" />
+        <img src="assets/gradient-services.png" alt="" width="800" height="800" loading="lazy" decoding="async" />
+      </picture>
+    </div>
+    <div class="services__header reveal" data-reveal-delay="0">
+      <span class="section-label section-label--light" data-i18n="services.label">Our Services</span>
+      <h2 class="section-heading section-heading--light" data-i18n="services.heading">Integrated Services... Tailored for You.</h2>
+    </div>
+    <div class="services__tabs">
+      <button class="tab tab--active" data-service-tab="parents" data-i18n="services.tab.parents">Parents</button>
+      <button class="tab" data-service-tab="doctors" data-i18n="services.tab.doctors">Doctors</button>
+    </div>
+    <div class="services__cards reveal" data-reveal-delay="120">
+      <div class="service-card reveal" data-reveal-delay="0">
+        <div class="service-card__icon">
+          <img src="assets/icon-growth.svg" alt="" />
+        </div>
+        <h3 class="service-card__title" data-i18n="services.card1.title">Growth Tracking</h3>
+        <p class="service-card__desc" data-i18n="services.card1.desc">Monitor weight and height against global standards</p>
+      </div>
+      <div class="service-card reveal" data-reveal-delay="80">
+        <div class="service-card__icon service-card__icon--round">
+          <img src="assets/icon-injection.svg" alt="" />
+        </div>
+        <h3 class="service-card__title" data-i18n="services.card2.title">Vaccine Log</h3>
+        <p class="service-card__desc" data-i18n="services.card2.desc">Smart alerts for upcoming doses to ensure immunity</p>
+      </div>
+      <div class="service-card reveal" data-reveal-delay="160">
+        <div class="service-card__icon">
+          <img src="assets/icon-milestones.svg" alt="" />
+        </div>
+        <h3 class="service-card__title" data-i18n="services.card3.title">Milestones</h3>
+        <p class="service-card__desc" data-i18n="services.card3.desc">Track cognitive and physical development step-by-step</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== FAQ SECTION ==================== -->
+  <section class="faq reveal" id="faq">
+    <div class="faq__header reveal" data-reveal-delay="0">
+      <span class="section-label" data-i18n="faq.label">FAQ</span>
+      <h2 class="section-heading" data-i18n="faq.heading">Everything You Need to Know</h2>
+    </div>
+    <div class="faq__list reveal" data-reveal-delay="120">
+      <div class="faq-item faq-item--open reveal" data-reveal-delay="0">
+        <button class="faq-item__header" aria-expanded="true">
+          <span class="faq-item__question" data-i18n="faq.q1">What age group does Dana cover?</span>
+          <span class="faq-item__icon">
+            <img src="assets/icon-remove.svg" alt="" class="faq-item__icon-img" />
+          </span>
+        </button>
+        <div class="faq-item__body">
+          <div class="faq-item__divider"></div>
+          <p class="faq-item__answer" data-i18n="faq.a1">Dana is designed to track your child's health, growth, and developmental milestones from birth up to 12 years old.</p>
+        </div>
+      </div>
+      <div class="faq-item reveal" data-reveal-delay="60">
+        <button class="faq-item__header" aria-expanded="false">
+          <span class="faq-item__question" data-i18n="faq.q2">Is my child's medical data secure?</span>
+          <span class="faq-item__icon">
+            <img src="assets/icon-add-circle.svg" alt="" class="faq-item__icon-img" />
+          </span>
+        </button>
+        <div class="faq-item__body">
+          <div class="faq-item__divider"></div>
+          <p class="faq-item__answer" data-i18n="faq.a2">Yes, we use industry-standard encryption and security measures to protect all medical data.</p>
+        </div>
+      </div>
+      <div class="faq-item reveal" data-reveal-delay="120">
+        <button class="faq-item__header" aria-expanded="false">
+          <span class="faq-item__question" data-i18n="faq.q3">How do doctors see the updates I make at home?</span>
+          <span class="faq-item__icon">
+            <img src="assets/icon-add-circle.svg" alt="" class="faq-item__icon-img" />
+          </span>
+        </button>
+        <div class="faq-item__body">
+          <div class="faq-item__divider"></div>
+          <p class="faq-item__answer" data-i18n="faq.a3">Doctors connected to your child's profile can view real-time updates through their dashboard.</p>
+        </div>
+      </div>
+      <div class="faq-item reveal" data-reveal-delay="180">
+        <button class="faq-item__header" aria-expanded="false">
+          <span class="faq-item__question" data-i18n="faq.q4">(For Doctors) Does Dana replace my current clinic software?</span>
+          <span class="faq-item__icon">
+            <img src="assets/icon-add-circle.svg" alt="" class="faq-item__icon-img" />
+          </span>
+        </button>
+        <div class="faq-item__body">
+          <div class="faq-item__divider"></div>
+          <p class="faq-item__answer" data-i18n="faq.a4">Dana complements your existing clinic software by providing additional child health tracking capabilities.</p>
+        </div>
+      </div>
+      <div class="faq-item reveal" data-reveal-delay="240">
+        <button class="faq-item__header" aria-expanded="false">
+          <span class="faq-item__question" data-i18n="faq.q5">How do I get started?</span>
+          <span class="faq-item__icon">
+            <img src="assets/icon-add-circle.svg" alt="" class="faq-item__icon-img" />
+          </span>
+        </button>
+        <div class="faq-item__body">
+          <div class="faq-item__divider"></div>
+          <p class="faq-item__answer" data-i18n="faq.a5">Simply download the Dana app from the App Store or Google Play, create an account, and start tracking your child's health journey.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== CTA BANNER ==================== -->
+  <section class="cta-banner reveal" data-reveal-delay="0">
+    <picture class="cta-banner__gradient">
+      <img src="assets/cta-banner-bg.png" alt="" loading="lazy" decoding="async" />
+    </picture>
+    <div class="cta-banner__content">
+      <div class="cta-banner__text">
+        <h2 class="cta-banner__title" data-i18n="cta.title">Still have questions?</h2>
+        <p class="cta-banner__subtitle" data-i18n="cta.subtitle">Need help or have a question? Reach out—we’ll get back to you.</p>
+      </div>
+      <a href="#contact" class="btn btn--primary">
+        <span data-i18n="cta.button">Get in touch</span>
+        <span class="btn__icon btn__icon--primary">
+          <img src="assets/arrow-left-white.svg" alt="" class="btn__arrow" />
+        </span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ==================== FOOTER ==================== -->
+  <footer class="footer" id="contact">
+    <div class="footer__inner">
+      <div class="footer__top">
+        <a href="#hero" class="footer__logo-link" aria-label="Go to top">
+          <img src="assets/logo-dark.png" alt="Dana Logo" class="footer__logo" width="1592" height="790" loading="lazy" decoding="async" />
+        </a>
+        <ul class="footer__links">
+          <li><a href="#hero" class="footer__link footer__link--active" data-i18n="nav.home">Home</a></li>
+          <li class="footer__link-separator" role="separator" aria-hidden="true"></li>
+          <li><a href="#about" class="footer__link" data-i18n="nav.about">About Us</a></li>
+          <li class="footer__link-separator" role="separator" aria-hidden="true"></li>
+          <li><a href="#why" class="footer__link" data-i18n="nav.why">Why Us</a></li>
+          <li class="footer__link-separator" role="separator" aria-hidden="true"></li>
+          <li><a href="#services" class="footer__link" data-i18n="nav.services">Services</a></li>
+          <li class="footer__link-separator" role="separator" aria-hidden="true"></li>
+          <li><a href="#faq" class="footer__link" data-i18n="nav.faq">FAQ</a></li>
+          <li class="footer__link-separator" role="separator" aria-hidden="true"></li>
+          <li><a href="#contact" class="footer__link" data-i18n="nav.contact">Contact Us</a></li>
+        </ul>
+      </div>
+      <div class="footer__divider"></div>
+      <div class="footer__bottom">
+        <p class="footer__copyright" data-i18n="footer.copyright">Copyright &copy; 2026 Dana . All Rights Reserved</p>
+        <div class="footer__socials">
+          <a href="#" class="footer__social" aria-label="Facebook" rel="noopener">
+            <img src="assets/icon-facebook.svg" alt="" width="20" height="20" loading="lazy" decoding="async" />
+          </a>
+          <a href="#" class="footer__social" aria-label="Twitter" rel="noopener">
+            <img src="assets/icon-twitter.svg" alt="" width="20" height="20" loading="lazy" decoding="async" />
+          </a>
+          <a href="#" class="footer__social" aria-label="Instagram" rel="noopener">
+            <img src="assets/icon-instagram.svg" alt="" width="20" height="20" loading="lazy" decoding="async" />
+          </a>
+          <a href="#" class="footer__social" aria-label="LinkedIn" rel="noopener">
+            <img src="assets/icon-linkedin-1.svg" alt="" class="li-1" width="20" height="20" loading="lazy" decoding="async" />
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <button class="back-to-top" type="button" aria-label="Back to top">
+    <span aria-hidden="true">↑</span>
+  </button>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

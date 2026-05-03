@@ -1,0 +1,15 @@
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Editor folders
+.vscode/
+.idea/
+
+# OS / tooling
+node_modules/
+dist/
+build/
