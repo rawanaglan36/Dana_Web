@@ -1,15 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import './SuperAdmin.css'; // Using the new dedicated CSS file
-import { useLanguage } from '../context/LanguageContext';
+import './SuperAdmin.css';
 import { api } from '../services/api';
 import searchIcon from '../assets/Dana - ضنا_icon/Table/Tags/Icon-1.svg';
-import languageIcon from '../assets/Dana - ضنا_icon/Language Icon.svg';
-import notificationIcon from '../assets/Dana - ضنا_icon/Notification Icon.svg';
-import badgeIcon from '../assets/Dana - ضنا_icon/Badge.svg';
 
 export default function SuperAdmin({ setIsSidebarOpen }) {
-  const { toggleLanguage } = useLanguage();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;

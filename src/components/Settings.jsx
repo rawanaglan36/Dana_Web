@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import './Settings.css';
 import coverImg from '../assets/Dana - ضنا_img/Image.png';
 import { useLanguage } from '../context/LanguageContext';
@@ -16,6 +16,12 @@ export default function Settings({ setIsSidebarOpen }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [isSaving, setIsSaving] = useState(false);
   const [isTabsMenuOpen, setIsTabsMenuOpen] = useState(false);
+
+  // Warning Modal States
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [cancelEntireDay, setCancelEntireDay] = useState(false);
+  const [selectedCancelSlots, setSelectedCancelSlots] = useState([]);
+  const [pendingAvailabilityPayload, setPendingAvailabilityPayload] = useState(null);
 
   const [notifications, setNotifications] = useState({
     appointmentNotification: false,
@@ -287,10 +293,28 @@ export default function Settings({ setIsSidebarOpen }) {
           availability: availabilityArray,
           consultTime: availability.consultTime
         };
-        await api.updateDoctorAppointments(payload);
+        
+        // Show warning modal instead of saving directly
+        setPendingAvailabilityPayload(payload);
+        setShowWarningModal(true);
+        return; // Early return to avoid immediate save and button loading state
       }
     } catch (err) {
       console.error('Error saving settings:', err);
+    }
+    setTimeout(() => setIsSaving(false), 2000);
+  };
+
+  const handleConfirmWarning = async () => {
+    setIsSaving(true);
+    setShowWarningModal(false);
+    try {
+      await api.updateDoctorAppointments(pendingAvailabilityPayload);
+      // In a real scenario, handle cancellations based on cancelEntireDay and selectedCancelSlots here
+      console.log('Cancelled entire day:', cancelEntireDay);
+      console.log('Cancelled slots:', selectedCancelSlots);
+    } catch (err) {
+      console.error('Error saving availability:', err);
     }
     setTimeout(() => setIsSaving(false), 2000);
   };
@@ -582,6 +606,89 @@ export default function Settings({ setIsSidebarOpen }) {
         {activeTab === 'availability' && renderAvailabilityTab()}
         {activeTab === 'notifications' && renderNotificationsTab()}
       </div>
+
+      {/* Warning Modal */}
+      {showWarningModal && (
+        <div className="warning-modal-overlay">
+          <div className="warning-modal-content">
+            <div className="warning-modal-header">
+              <div className="warning-icon-wrapper">
+                <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 100 100" fill="none">
+                  <path d="M81.291 24.3752L56.541 10.0835C52.4994 7.75016 47.4994 7.75016 43.416 10.0835L18.7077 24.3752C14.666 26.7085 12.166 31.0418 12.166 35.7502V64.2502C12.166 68.9168 14.666 73.2502 18.7077 75.6252L43.4577 89.9168C47.4994 92.2502 52.4994 92.2502 56.5827 89.9168L81.3327 75.6252C85.3744 73.2918 87.8744 68.9585 87.8744 64.2502V35.7502C87.8327 31.0418 85.3327 26.7502 81.291 24.3752ZM46.8744 32.2918C46.8744 30.5835 48.291 29.1668 49.9994 29.1668C51.7077 29.1668 53.1244 30.5835 53.1244 32.2918V54.1668C53.1244 55.8752 51.7077 57.2918 49.9994 57.2918C48.291 57.2918 46.8744 55.8752 46.8744 54.1668V32.2918ZM53.8327 69.2918C53.6244 69.7918 53.3327 70.2502 52.9577 70.6668C52.166 71.4585 51.1244 71.8752 49.9994 71.8752C49.4577 71.8752 48.916 71.7502 48.416 71.5418C47.8744 71.3335 47.4577 71.0418 47.041 70.6668C46.666 70.2502 46.3744 69.7918 46.1244 69.2918C45.916 68.7918 45.8327 68.2502 45.8327 67.7085C45.8327 66.6252 46.2494 65.5418 47.041 64.7502C47.4577 64.3752 47.8744 64.0835 48.416 63.8752C49.9577 63.2085 51.791 63.5835 52.9577 64.7502C53.3327 65.1668 53.6244 65.5835 53.8327 66.1252C54.041 66.6252 54.166 67.1668 54.166 67.7085C54.166 68.2502 54.041 68.7918 53.8327 69.2918Z" fill="#F49E25"/>
+                </svg>
+              </div>
+              <h3>Warning: Scheduled Appointments Exist</h3>
+              <p>There are confirmed patient bookings on this date. How would you like to proceed with these appointments?</p>
+            </div>
+            
+            <div className="warning-options-container">
+              <div className="warning-option-box">
+                <div className="warning-option-text">
+                  <h4>Cancel the entire day</h4>
+                  <p>All appointments will be canceled</p>
+                </div>
+                <div className="warning-toggle-switch">
+                  <input 
+                    type="checkbox" 
+                    checked={cancelEntireDay} 
+                    onChange={() => {
+                      setCancelEntireDay(!cancelEntireDay);
+                      if (!cancelEntireDay) setSelectedCancelSlots([]); // Clear slots if entire day is selected
+                    }} 
+                    id="cancel-day-toggle"
+                  />
+                  <label htmlFor="cancel-day-toggle"></label>
+                </div>
+              </div>
+
+              <div className={`warning-option-box slots-box ${cancelEntireDay ? 'disabled' : ''}`}>
+                <div className="warning-option-text">
+                  <h4 style={{ color: '#F49E25' }}>Cancel specific time slots</h4>
+                </div>
+                <div className="time-slots-grid">
+                  {['10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 AM', '12:30 AM', '01:00 AM', '01:30 AM'].map(time => {
+                    const isSelected = selectedCancelSlots.includes(time);
+                    return (
+                      <div 
+                        key={time} 
+                        className={`time-slot-item ${isSelected ? 'selected' : ''}`}
+                        onClick={() => {
+                          if (cancelEntireDay) return;
+                          if (isSelected) {
+                            setSelectedCancelSlots(prev => prev.filter(t => t !== time));
+                          } else {
+                            setSelectedCancelSlots(prev => [...prev, time]);
+                          }
+                        }}
+                      >
+                        <div className="time-slot-content">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px', color: '#00AEC0'}}>
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                          </svg>
+                          <span>{time}</span>
+                        </div>
+                        <div className={`radio-circle ${isSelected ? 'checked' : ''}`}>
+                          {isSelected && <div className="inner-circle"></div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="warning-modal-actions">
+              <button className="keep-schedule-btn" onClick={() => setShowWarningModal(false)}>Keep Schedule</button>
+              <button className="confirm-cancel-btn" onClick={handleConfirmWarning}>
+                {isSaving ? (
+                  <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid white', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                ) : 'Confirm Cancellation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

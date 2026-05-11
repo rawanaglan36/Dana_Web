@@ -38,7 +38,7 @@ export default function Login() {
     setIsSubmitting(true);
     try {
       const result = await api.preSignIn({
-        phone: email.trim(), // The input field accepts email or phone, but the API seems to expect phone key
+        phone: email.trim(), 
         password: password,
       });
       console.log('✅ pre-signIn success:', result);

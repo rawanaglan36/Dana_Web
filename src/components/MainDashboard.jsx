@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import peopleIcon from '../assets/Dana - ضنا_icon/vuesax copy/bold/people.svg';
 import profile2userIcon from '../assets/Dana - ضنا_icon/vuesax copy/bold/profile-2user.svg';
 import line6Icon from '../assets/Dana - ضنا_icon/Line 6.svg';
 import { useLanguage } from '../context/LanguageContext';
@@ -11,24 +10,15 @@ export default function MainDashboard({ setIsSidebarOpen }) {
   const { t, toggleLanguage, language, isRTL } = useLanguage();
   const [toastMsg, setToastMsg] = useState('');
   const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
-  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-  const notifications = [
-    { id: 1, text: isRTL ? 'موعد جديد: أحمد علي - 10:30 ص' : 'New appointment: Ahmed Ali - 10:30 AM', time: '2m' },
-    { id: 2, text: isRTL ? 'تم إلغاء موعد: ماريا تشن' : 'Cancelled: Maria Chen appointment', time: '15m' },
-    { id: 3, text: isRTL ? 'تحيث ملف المريض: جون سميث' : 'Patient file updated: John Smith', time: '1h' },
-    { id: 4, text: isRTL ? 'رسالة جديدة من إيلينا ريفيرا' : 'New message from Elena Rivera', time: '2h' },
-  ];
-  const [readNotifs, setReadNotifs] = useState(new Set());
+
 
   // ✅ Real API data
   const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.getDashboardAnalytics().then(data => {
       setAnalytics(data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    }).catch(() => {});
   }, []);
 
   // ✅ Pure API values — no fallbacks
@@ -43,11 +33,15 @@ export default function MainDashboard({ setIsSidebarOpen }) {
   // Chart from monthlyOverview API data
   const monthKeys = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
   const apiMonthly = analytics?.monthlyOverview ?? [];
-  const maxCount = Math.max(...apiMonthly.map(m => m.count), 10); // minimum scale of 10
+  
+  // Fixed scale as requested: Y-axis is 0-100
+  const yAxisMax = 100;
+
   const chartDataRaw = monthKeys.map((key, i) => {
     const apiEntry = apiMonthly.find(m => m.month === i + 1);
     const raw = apiEntry?.count ?? 0;
-    const val = Math.round((raw / maxCount) * 95) || 0;
+    // Directly scale to 100% since Y-axis is fixed at 100
+    const val = raw > 100 ? 100 : raw; 
     return { month: key, val, curveVal: Math.min(val + 8, 100), rawCount: raw };
   });
   // Reverse chart data in RTL so January starts from the right
@@ -94,29 +88,12 @@ export default function MainDashboard({ setIsSidebarOpen }) {
           <button className="icon-btn" style={{ fontWeight: 'bold' }} onClick={toggleLanguage} title={isRTL ? 'Switch to English' : 'التبديل للعربية'}>
             {language === 'en' ? 'عربي' : 'En'}
           </button>
-          <div style={{ position: 'relative' }}>
-            <button className="icon-btn notification-btn" onClick={() => setShowNotifDropdown(!showNotifDropdown)}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-              </svg>
-              {notifications.some(n => !readNotifs.has(n.id)) && <span className="badge"></span>}
-            </button>
-            {showNotifDropdown && (
-              <div className="notif-dropdown" onClick={(e) => e.stopPropagation()}>
-                <div className="notif-dropdown-header">
-                  <strong>{t('notifications')}</strong>
-                  <button className="notif-mark-all" onClick={() => setReadNotifs(new Set(notifications.map(n => n.id)))}>{isRTL ? 'قراءة الكل' : 'Mark all read'}</button>
-                </div>
-                {notifications.map(n => (
-                  <div key={n.id} className={`notif-dropdown-item ${!readNotifs.has(n.id) ? 'unread' : ''}`} onClick={() => setReadNotifs(prev => new Set([...prev, n.id]))}>
-                    <span className="notif-text">{n.text}</span>
-                    <span className="notif-time">{n.time}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <button className="icon-btn notification-btn" onClick={() => showToast(t('noNotifications'))}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+          </button>
           <div className="avatar" onClick={() => navigate('/dashboard/settings')} style={{ cursor: 'pointer' }} title={t('settings')}>A</div>
         </div>
       </header>
@@ -180,7 +157,7 @@ export default function MainDashboard({ setIsSidebarOpen }) {
               <div className="grid-line"></div>
             </div>
 
-            <div className="chart-bars" style={{ position: 'relative', margin: '0 16px' }}>
+            <div className="chart-bars" style={{ position: 'relative', marginLeft: '16px', marginRight: '16px' }}>
               {/* Overlay dynamic curve directly inside the bars container to match dimensions precisely */}
               <div className="chart-curve-overlay" style={{ position: 'absolute', left: '0', right: '0', top: '0', bottom: '0' }}>
                 <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
@@ -200,7 +177,7 @@ export default function MainDashboard({ setIsSidebarOpen }) {
                 const opacity = 1;
                 const leftPos = ((i + 0.5) * 100) / 12;
                 return (
-                  <div className="bar-wrapper" key={i} style={{ position: 'absolute', height: '100%', bottom: 0, left: `${leftPos}%`, transform: 'translateX(-50%)', width: 'clamp(14px, 4vw, 32px)' }}>
+                  <div className="bar-wrapper" key={i} style={{ position: 'absolute', height: '100%', bottom: 0, left: `${leftPos}%`, transform: 'translateX(-50%)', width: 'clamp(10px, 2.2vw, 20px)' }}>
                     <div className="point-dot" style={{ bottom: `${d.val}%` }}>
                       <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10" fill="none">
                         <circle cx="5" cy="5" r="3.5" fill="#FFFFFF" stroke="#EFA987" strokeWidth="2" />
@@ -306,7 +283,7 @@ export default function MainDashboard({ setIsSidebarOpen }) {
         </div>
       </div>
 
-      {showNotifDropdown && <div style={{ position: 'fixed', inset: 0, zIndex: 5 }} onClick={() => setShowNotifDropdown(false)}></div>}
+
       {toastMsg && <div className="toast-popup">{toastMsg}</div>}
     </div>
   );

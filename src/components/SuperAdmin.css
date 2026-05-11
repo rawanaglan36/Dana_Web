@@ -771,3 +771,48 @@
     background-position-x: -200%;
   }
 }
+
+/* ===== Responsive Design ===== */
+@media (max-width: 1024px) {
+  .sa-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .sa-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .super-admin-dashboard {
+    padding: 16px;
+  }
+  .sa-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .sa-kpi-row {
+    grid-template-columns: 1fr;
+  }
+  .sa-dir-header {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .sa-search {
+    width: 100%;
+  }
+  .sa-details-grid {
+    grid-template-columns: 1fr;
+  }
+  .sa-modal {
+    padding: 24px;
+    width: 95vw;
+  }
+  .sa-modal-actions {
+    flex-direction: column;
+  }
+  .sa-modal-btn-cancel, .sa-modal-btn-confirm {
+    width: 100%;
+  }
+}

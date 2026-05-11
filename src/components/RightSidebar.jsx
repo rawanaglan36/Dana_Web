@@ -1,10 +1,12 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 import emptyStateImg from '../assets/Dana - ضنا_img/_Empty state item.png';
 
 export default function RightSidebar() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
   const [weekOffset, setWeekOffset] = useState(0);
   const [activeDayIndex, setActiveDayIndex] = useState(today.getDay()); // Sunday=0
@@ -40,6 +42,8 @@ export default function RightSidebar() {
   const [loading, setLoading] = useState(true);
   const [slotsData, setSlotsData] = useState(null);
   const [patientsList, setPatientsList] = useState([]);
+  const [bookingsMap, setBookingsMap] = useState({});
+  const [rawBookings, setRawBookings] = useState([]);
 
   // Fetch slots when selected date changes
   useEffect(() => {
@@ -50,11 +54,30 @@ export default function RightSidebar() {
       .finally(() => setLoading(false));
   }, [formattedDateString]);
 
-  // Fetch global patients list
+  // Fetch global patients list + bookings for mapping
   useEffect(() => {
-    api.getPatients()
-      .then(data => setPatientsList(data?.patients || []))
-      .catch(console.error);
+    Promise.all([
+      api.getPatients().catch(() => null),
+      api.getBookings().catch(() => []),
+    ]).then(([pData, bData]) => {
+      setPatientsList(pData?.patients || []);
+      const bookings = Array.isArray(bData) ? bData : [];
+      setRawBookings(bookings);
+      // Build childId -> booking mapping
+      const bMap = {};
+      bookings.forEach(b => {
+        const cId = b.childId?._id || b.childId || '';
+        if (cId) {
+          bMap[cId] = {
+            bookingId: b._id,
+            status: b.status,
+            childName: b.childId?.childName || '',
+            parentId: b.parentId?._id || b.parentId || '',
+          };
+        }
+      });
+      setBookingsMap(bMap);
+    }).catch(console.error);
   }, []);
 
   // Map the patients to display based on API response
@@ -62,12 +85,38 @@ export default function RightSidebar() {
     const colors = ['#ffb3a7', '#a7d8ff', '#ffd6a7', '#a7ffb1', '#dca7ff', '#ffeca7'];
     
     if (slotsData?.bookedTimes && slotsData.bookedTimes.length > 0) {
+      // Build a lookup: time -> booking info for the selected date
+      const bookingsByTime = {};
+      rawBookings.forEach(b => {
+        if (b.date === formattedDateString && b.time) {
+          bookingsByTime[b.time] = {
+            name: b.childId?.childName || '',
+            age: b.childId?.birthDate 
+              ? Math.floor((Date.now() - new Date(b.childId.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+              : null,
+            childId: b.childId?._id || '',
+            parentId: b.parentId?._id || b.parentId || '',
+            bookingId: b._id,
+            status: b.status,
+          };
+        }
+      });
+
       return slotsData.bookedTimes.map((bt, i) => {
-        // If bookedTimes is an array of objects or strings
-        const time = typeof bt === 'string' ? `${bt} - Booked` : (bt.time || 'N/A');
-        const name = typeof bt === 'string' ? `Patient ${i+1}` : (bt.name || bt.patientName || `Patient ${i+1}`);
-        const age = typeof bt === 'object' && bt.age ? `${bt.age} Years` : 'N/A';
-        return { name, age, time, color: colors[i % colors.length] };
+        const timeStr = typeof bt === 'string' ? bt : (bt.time || '');
+        const match = bookingsByTime[timeStr];
+        const name = match?.name || (typeof bt === 'object' ? (bt.name || bt.patientName || '') : '') || `Patient ${i+1}`;
+        const age = match?.age != null ? `${match.age} Years` : (typeof bt === 'object' && bt.age ? `${bt.age} Years` : 'N/A');
+        const time = `${timeStr} - Booked`;
+        return {
+          name,
+          age,
+          time,
+          color: colors[i % colors.length],
+          childId: match?.childId || '',
+          parentId: match?.parentId || '',
+          bookingId: match?.bookingId || '',
+        };
       });
     } else if (patientsList.length > 0) {
       // Fallback: Just show patients from the general list
@@ -75,12 +124,27 @@ export default function RightSidebar() {
         name: p.name || p.childName || `Patient ${i+1}`,
         age: p.age ? `${p.age} Years` : 'N/A',
         time: p.time || '10:00 AM - 10:30 AM',
-        color: colors[i % colors.length]
+        color: colors[i % colors.length],
+        childId: p.childId || '',
+        parentId: p.parentId || '',
+        childRecordID: p.childRecordID || '',
       }));
     }
     
     return []; // Empty if no data
-  }, [slotsData, patientsList]);
+  }, [slotsData, patientsList, rawBookings, formattedDateString]);
+
+  const handlePatientClick = (patient) => {
+    // Navigate to Schedule page - it will show the patient's consultation
+    const bookingInfo = bookingsMap[patient.childId] || {};
+    const params = new URLSearchParams({
+      childId: patient.childId || '',
+      parentId: patient.parentId || '',
+      patientName: patient.name || '',
+      bookingId: bookingInfo.bookingId || '',
+    });
+    navigate(`/dashboard/schedule?${params.toString()}`);
+  };
 
   return (
     <aside className="dashboard-right">
@@ -127,7 +191,7 @@ export default function RightSidebar() {
           <div style={{ padding: '24px', textAlign: 'center', color: '#6B7280' }}>Loading schedule...</div>
         ) : displayPatients.length > 0 ? (
           displayPatients.map((p, idx) => (
-            <div className="patient-item" key={idx} style={{ cursor: 'pointer' }}>
+            <div className="patient-item" key={idx} style={{ cursor: 'pointer' }} onClick={() => handlePatientClick(p)}>
               <div className="patient-avatar-img">
                 <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.name.replace(' ', '')}&backgroundColor=${p.color.replace('#', '')}`} alt={p.name} />
               </div>
@@ -152,3 +216,4 @@ export default function RightSidebar() {
     </aside>
   );
 }
+

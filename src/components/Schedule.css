@@ -10,6 +10,7 @@
   overflow-y: auto;
   padding-right: 4px;
 }
+
 .schedule-dashboard::-webkit-scrollbar {
   display: none;
 }
@@ -22,7 +23,7 @@
   background: white;
   padding: 16px 24px;
   border-radius: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
   border: 1px solid #E5E7EB;
 }
 
@@ -337,6 +338,44 @@
 .card-action-btn.profile:hover {
   background: #F0FBFC;
 }
+/* Completed Card Styling */
+.appointment-card.completed-card {
+  background: var(--color-primary-default, #00AEC0);
+  border-color: var(--color-primary-default, #00AEC0);
+}
+
+.appointment-card.completed-card .card-patient-text h4,
+.appointment-card.completed-card .card-patient-text span,
+.appointment-card.completed-card .card-status,
+.appointment-card.completed-card .card-detail-val,
+.appointment-card.completed-card .card-detail-lbl {
+  color: white;
+}
+
+.appointment-card.completed-card .card-status.completed {
+  color: white;
+}
+
+.appointment-card.completed-card .card-detail-col:first-child {
+  border-right-color: rgba(255, 255, 255, 0.3);
+}
+
+.appointment-card.completed-card .card-details-row {
+  border-top-color: rgba(255, 255, 255, 0.4);
+  border-bottom-color: rgba(255, 255, 255, 0.4);
+}
+
+.appointment-card.completed-card .card-action-btn.profile {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid white;
+}
+
+.appointment-card.completed-card .card-action-btn.profile:hover {
+  background: white;
+  color: var(--color-primary-default, #00AEC0);
+}
+
 
 /* Extended Consultation View */
 .consultation-main-content {
@@ -432,9 +471,12 @@
   .schedule-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .consultation-metrics-row, .consultation-2col {
-    grid-template-columns: 1fr;
+
+  .consultation-metrics-row,
+  .consultation-2col {
+    grid-template-columns: 1fr !important;
   }
+
   .pd-vaccine-grid {
     grid-template-columns: repeat(2, 1fr) !important;
   }
@@ -447,18 +489,23 @@
     align-items: center;
     text-align: center;
   }
+
   .schedule-grid {
     grid-template-columns: 1fr;
   }
+
   .schedule-controls-row {
     flex-direction: column;
     gap: 16px;
     align-items: flex-start;
   }
-  .date-selector, .schedule-filters {
+
+  .date-selector,
+  .schedule-filters {
     width: 100%;
     justify-content: space-between;
   }
+
   .pd-vaccine-grid {
     grid-template-columns: 1fr !important;
   }

@@ -977,6 +977,8 @@
 @media (max-width: 768px) {
   .dashboard-header {
     padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 12px;
   }
 
   .schedule-header {
@@ -987,17 +989,23 @@
     font-size: 18px;
   }
 
+  .kpi-cards {
+    grid-template-columns: 1fr;
+  }
+
   .chart-card {
     height: auto;
     min-height: 300px;
+    overflow: hidden;
   }
 
   .chart-placeholder {
-    overflow-x: visible;
+    overflow-x: auto;
+    padding-bottom: 10px;
   }
   
   .chart-bars {
-    min-width: 100%;
+    min-width: 450px; /* Prevent bars from squishing too much on very small screens */
   }
 
   /* Shrink the pie chart labels a bit just in case they overlap on tiny screens */

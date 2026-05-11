@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-const DEFAULT_DOCTOR_ID = '69eaa21068817048ba4de63b'; // Hager Mohamed Abdelftah
+const DEFAULT_DOCTOR_ID = '69316d56b6ea9f66f803e64a'; // Adelrahman Osama
 const SUPER_ADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OWVhNTIxZTA3NTVmMDQ1NzU4YjY0MmQiLCJwaG9uZSI6IjAxMjg5NjMwMjAyIiwicm9sZSI6ImRvY3RvciIsImlhdCI6MTc3Njk2NDU4MSwiZXhwIjoxNzc2OTY1NDgxfQ.uVLDLhIeV3Ab1UPCPmQqfVCNAGZmfXpi67qCHtFtxLM';
 
 // --- Auth Token Helpers ---
@@ -107,7 +107,12 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const json = await res.json();
+    let json;
+    try {
+      json = await res.json();
+    } catch {
+      throw new Error(res.status === 502 ? 'Server is currently unavailable (502). Please try again later.' : `Server error (${res.status}). Please try again.`);
+    }
     if (!res.ok || json.response?.status !== 200) {
       throw new Error(json.response?.message || json.message || 'Login failed');
     }
@@ -128,11 +133,22 @@ export const api = {
     if (json.accessToken?.access_token) {
       authStorage.setToken(json.accessToken.access_token);
     }
-    if (json.accessToken?.access_token) {
+
+    console.log('🔐 verifySignIn full response:', JSON.stringify(json, null, 2));
+
+    // Try to extract doctorId from response data first (most reliable)
+    const responseData = json.response?.data || json.data || {};
+    const doctorIdFromResponse = responseData.doctorId || responseData._id || responseData.id;
+
+    if (doctorIdFromResponse) {
+      authStorage.setDoctorId(doctorIdFromResponse);
+      console.log('✅ DoctorId from response data:', doctorIdFromResponse);
+    } else if (json.accessToken?.access_token) {
       try {
         const payload = JSON.parse(atob(json.accessToken.access_token.split('.')[1]));
         if (payload.sub) {
           authStorage.setDoctorId(payload.sub);
+          console.log('ℹ️ DoctorId from JWT sub:', payload.sub);
         }
       } catch (e) {
         console.error('Failed to parse JWT payload', e);
@@ -142,6 +158,29 @@ export const api = {
   },
 
   // ====== SUPER ADMIN ======
+
+  // Admin Sign In - POST /v1/admin/sign-in
+  async adminSignIn({ email, password }) {
+    const res = await fetch(`${API_BASE}/v1/admin/sign-in`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    let json;
+    try {
+      json = await res.json();
+    } catch {
+      throw new Error(res.status === 502 ? 'Server unavailable (502).' : `Server error (${res.status}).`);
+    }
+    if (!res.ok) {
+      throw new Error(json.response?.message || json.message || 'Admin login failed');
+    }
+    if (json.accessToken?.access_token || json.access_token) {
+      authStorage.setToken(json.accessToken?.access_token || json.access_token);
+    }
+    localStorage.setItem('dana_super_admin', 'true');
+    return json;
+  },
 
   // Get All Doctors - GET /v1/doctor
   async getAllDoctors() {
@@ -250,6 +289,34 @@ export const api = {
     return json.response?.data || json.data || [];
   },
 
+  // Child Skills Progress (Aggregates all categories)
+  async getChildSkillsProgress(childId) {
+    try {
+      const skillsRes = await fetch(`${API_BASE}/v1/skills`, { headers: getAuthHeaders() });
+      const skillsJson = await skillsRes.json();
+      const categories = skillsJson.response?.data || skillsJson.data || [];
+      
+      const progress = await Promise.all(categories.map(async (cat) => {
+        const res = await fetch(`${API_BASE}/v1/skills/${cat._id}/child/${childId}/checklist`, { headers: getAuthHeaders() });
+        const json = await res.json();
+        const checklist = json.response?.data || json.data || [];
+        const total = checklist.length;
+        const checked = checklist.filter(item => item.checked).length;
+        return {
+          id: cat._id,
+          title: cat.name,
+          checked: checked,
+          total: total,
+          percentage: total > 0 ? Math.round((checked / total) * 100) : 0
+        };
+      }));
+      return progress;
+    } catch (e) {
+      console.error('Error fetching skills progress:', e);
+      return [];
+    }
+  },
+
   // Child Vaccinations - GET /v1/child/:childId/childVaccinations
   async getChildVaccinations(childId) {
     const res = await fetch(`${API_BASE}/v1/child/${childId}/childVaccinations`, {
@@ -287,9 +354,32 @@ export const api = {
     return json.response?.data || json.data || null;
   },
 
+  // Child Record by childId - GET /v1/child-record/child/:childId
+  // Returns full child record with growthHistory, latestGrowth, vaccinations, childData
+  async getChildRecordByChildId(childId) {
+    if (!childId) return null;
+    const res = await fetch(`${API_BASE}/v1/child-record/child/${childId}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    const data = json.response?.data || json.data || null;
+    // API returns an array, take the first (latest) record
+    if (Array.isArray(data) && data.length > 0) return data[0];
+    return data;
+  },
+
+  // All Vaccinations definitions - GET /v1/vaccinations
+  async getAllVaccinations() {
+    const res = await fetch(`${API_BASE}/v1/vaccinations`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json.response?.data || json.data || json || [];
+  },
+
   // Complete Consultation - PATCH
-  async completeConsultation(childId) {
-    const res = await fetch(`${API_BASE}/v1/doctor/${getDoctorId()}/child/${childId}/compelete-consultation`, {
+  async completeConsultation(bookingId) {
+    const res = await fetch(`${API_BASE}/v1/doctor/booking/${bookingId}/compelete-consultation`, {
       method: 'PATCH',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     });
@@ -351,7 +441,63 @@ export const api = {
     const json = await res.json();
     return json.response?.data || null;
   },
-};
 
-export { API_BASE };
-export const DOCTOR_ID = DEFAULT_DOCTOR_ID;
+  // ====== CHAT / MESSAGES ======
+
+  // Create conversation (doctor side) by booking ID
+  async createConversationByBooking(bookingId) {
+    const res = await fetch(`${API_BASE}/v1/chat/conversations/${bookingId}/parent`, {
+      method: 'POST',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    });
+    const json = await res.json();
+    return json.response?.data || json.data || null;
+  },
+
+  // Check if room exists for user
+  async checkRoom(userId, roomId) {
+    const res = await fetch(`${API_BASE}/v1/chat/check-room/${userId}/room/${roomId}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json;
+  },
+
+  // Get messages by room ID
+  async getMessagesByRoom(roomId) {
+    const res = await fetch(`${API_BASE}/v1/chat/messages/room/${roomId}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json.response?.data || json.data || [];
+  },
+
+  // Mark message as delivered
+  async markMessageDelivered(messageId) {
+    const res = await fetch(`${API_BASE}/v1/chat/messages/${messageId}/delivered`, {
+      method: 'PATCH',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    });
+    const json = await res.json();
+    return json.response?.data || json;
+  },
+
+  // Mark message as read
+  async markMessageRead(messageId) {
+    const res = await fetch(`${API_BASE}/v1/chat/messages/${messageId}/read`, {
+      method: 'PATCH',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+    });
+    const json = await res.json();
+    return json.response?.data || json;
+  },
+
+  // Get unread messages for receiver (doctor)
+  async getUnreadMessages() {
+    const res = await fetch(`${API_BASE}/v1/chat/messages/unread/${getDoctorId()}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json.response?.data || json.data || json || [];
+  },
+};

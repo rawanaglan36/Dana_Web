@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import doctorImg from './assets/Doctor-rafiki 1.png';
 import './App.css';
 
@@ -12,17 +12,24 @@ import SuperAdmin from './components/SuperAdmin.jsx';
 
 import { LanguageProvider } from './context/LanguageContext';
 
+function SuperAdminGuard({ children }) {
+  const isLoggedIn = localStorage.getItem('dana_super_admin') === 'true';
+  return isLoggedIn ? children : <Navigate to="/super-admin-login" replace />;
+}
+
 function App() {
   return (
     <LanguageProvider>
       <Routes>
         <Route path="/dashboard/*" element={<Dashboard />} />
         <Route path="/super-admin/*" element={
-          <div className="dashboard-layout">
-            <div className="dashboard-content-wrapper" style={{ padding: '24px', width: '100%', height: '100vh', boxSizing: 'border-box' }}>
-              <SuperAdmin />
+          <SuperAdminGuard>
+            <div className="dashboard-layout">
+              <div className="dashboard-content-wrapper" style={{ padding: '24px', width: '100%', height: '100vh', boxSizing: 'border-box' }}>
+                <SuperAdmin />
+              </div>
             </div>
-          </div>
+          </SuperAdminGuard>
         } />
         <Route path="/*" element={
           <div className="login-page">

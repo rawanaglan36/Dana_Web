@@ -6,14 +6,17 @@ import injectionIcon from '../assets/Dana - ضنا_icon/mingcute_injection-fill.
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 
-export default function PatientDetails({ patient, onClose, triggerPosition, isFullPage }) {
+export default function PatientDetails({ patient, onClose, triggerPosition, isFullPage, hideControls }) {
   const { t } = useLanguage();
-  
+
   const [recordData, setRecordData] = useState(null);
   const [growthData, setGrowthData] = useState([]);
   const [latestGrowth, setLatestGrowth] = useState(null);
   const [vaccinations, setVaccinations] = useState([]);
+  const [vaccineDefinitions, setVaccineDefinitions] = useState([]);
+  const [milestones, setMilestones] = useState([]);
   const [realChildId, setRealChildId] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   // Lock body scroll when sidebar is open
   useEffect(() => {
@@ -26,20 +29,54 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
   }, [isFullPage]);
 
   useEffect(() => {
-    if (patient?._id && isFullPage) {
-      setLoading(true);
-      // Single call gets everything
-      api.getChildRecord(patient._id).then((record) => {
-        setRecordData(record);
-        setGrowthData(record?.growthHistory ?? []);
-        setLatestGrowth(record?.latestGrowth ?? record?.currentStats ?? null);
-        setVaccinations(record?.vaccinations ?? []);
-        if (record?.childId) setRealChildId(record.childId);
-      }).catch(() => {});
-    } else {
-      // nothing
-    }
-  }, [patient, isFullPage]);
+    const childId = patient?.childId || patient?._id;
+    if (!childId) return;
+    setLoading(true);
+    console.log('📊 PatientDetails fetching data for childId:', childId);
+
+    // Fetch all data in parallel
+    Promise.all([
+      // Primary: Get child record by childId (GET endpoint)
+      api.getChildRecordByChildId(childId).catch(() => null),
+      // Growth history
+      api.getChildGrowth(childId).catch(() => []),
+      // Latest growth
+      api.getChildLatestGrowth(childId).catch(() => null),
+      // Vaccine definitions (for name lookup)
+      api.getAllVaccinations().catch(() => []),
+      // Skills progress (aggregates all categories)
+      api.getChildSkillsProgress(childId).catch(() => []),
+    ]).then(([record, growth, latest, vaccineDefs, skills]) => {
+      console.log('📊 Child record:', record);
+      console.log('📊 Growth:', growth);
+      console.log('📊 Latest:', latest);
+      console.log('📊 Vaccine defs:', vaccineDefs?.length);
+      console.log('📊 Skills:', skills);
+
+      setRecordData(record);
+      setVaccineDefinitions(Array.isArray(vaccineDefs) ? vaccineDefs : []);
+
+      // Growth data: prefer record data, fallback to individual API
+      const growthHistory = record?.growthHistory?.length > 0 ? record.growthHistory : (Array.isArray(growth) ? growth : []);
+      setGrowthData(growthHistory);
+
+      // Latest growth: prefer record, then individual API, then compute from history
+      const latestG = record?.latestGrowth || record?.currentStats || latest || (growthHistory.length > 0 ? growthHistory[growthHistory.length - 1] : null);
+      setLatestGrowth(latestG);
+
+      // Vaccinations from child record
+      setVaccinations(record?.vaccinations ?? []);
+
+      // Milestones from skills checklist
+      setMilestones(Array.isArray(skills) ? skills : []);
+
+      if (record?.childId) setRealChildId(typeof record.childId === 'string' ? record.childId : record.childId._id || record.childId);
+      setLoading(false);
+    }).catch((err) => {
+      console.log('❌ PatientDetails fetch error:', err);
+      setLoading(false);
+    });
+  }, [patient]);
 
   const stats = latestGrowth ?? recordData?.currentStats ?? recordData?.latestGrowth ?? {};
   const weight = stats.weight ?? null;
@@ -50,23 +87,32 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
   const gender = childInfo.gender || patient.gender || '';
   const age = childInfo.age ?? patient.age ?? '';
 
-  // Growth history → chart (from dedicated growth endpoint)
+  // Build vaccine name lookup map from definitions
+  const vaccineNameMap = {};
+  vaccineDefinitions.forEach(v => { if (v._id) vaccineNameMap[v._id] = v.name; });
+
+  // Growth history → chart
   const history = growthData.length > 0 ? growthData : (recordData?.growthHistory ?? []);
   const monthKeys = history.length > 0
     ? history.map(g => new Date(g.recordDate).toLocaleString('en', { month: 'short' }).toLowerCase())
     : ['sep', 'oct', 'nov', 'dec', 'jan', 'feb', 'mar'];
-  const weightData = history.length > 0 ? history.map(g => g.weight ?? 0) : [0,0,0,0,0,0,0];
-  const headData = history.length > 0 ? history.map(g => g.headCircumference ?? 0) : [0,0,0,0,0,0,0];
-  const heightData = history.length > 0 ? history.map(g => g.height ?? 0) : [0,0,0,0,0,0,0];
+  const weightData = history.length > 0 ? history.map(g => g.weight ?? 0) : [0, 0, 0, 0, 0, 0, 0];
+  const headData = history.length > 0 ? history.map(g => g.headCircumference ?? 0) : [0, 0, 0, 0, 0, 0, 0];
+  const heightData = history.length > 0 ? history.map(g => g.height ?? 0) : [0, 0, 0, 0, 0, 0, 0];
 
-  // Vaccinations from child record
-  const vaccines = vaccinations.map(v => ({
-    name: v.vaccineId?.name || v.vaccine?.name || 'Vaccine',
-    date: v.takenDate
-      ? new Date(v.takenDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-      : new Date(v.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
-    color: v.status === 'taken' ? 'green' : v.status === 'missed' ? 'red' : 'yellow',
-  }));
+  // Vaccinations - resolve names from definitions
+  const vaccines = vaccinations.map(v => {
+    const vaccineIdStr = typeof v.vaccineId === 'string' ? v.vaccineId : v.vaccineId?._id || '';
+    const vaccineName = v.vaccineId?.name || vaccineNameMap[vaccineIdStr] || v.vaccine?.name || 'Vaccine';
+    return {
+      name: vaccineName,
+      date: v.takenDate
+        ? new Date(v.takenDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : new Date(v.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+      color: v.status === 'taken' ? 'green' : v.status === 'missed' ? 'red' : 'yellow',
+    };
+  });
+
 
   const chartW = 580;
   const chartH = 160;
@@ -91,36 +137,38 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
     return (
       <div style={{ width: '100%', minHeight: '100vh', background: '#F2F2F2', padding: '24px', boxSizing: 'border-box' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
+
           {/* Back Button */}
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              console.log('🔙 Back button clicked, calling onClose');
-              if (onClose) {
-                onClose();
-              }
-            }}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              background: 'none', 
-              border: 'none', 
-              color: '#00AEC0', 
-              fontSize: '16px', 
-              fontWeight: '600', 
-              cursor: 'pointer',
-              padding: '8px 0',
-              zIndex: 1000
-            }}
-          >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            {t('back') || 'Back'}
-          </button>
+          {!hideControls && (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('🔙 Back button clicked, calling onClose');
+                if (onClose) {
+                  onClose();
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'none',
+                border: 'none',
+                color: '#00AEC0',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                padding: '8px 0',
+                zIndex: 1000
+              }}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              {t('back') || 'Back'}
+            </button>
+          )}
 
           {/* Header */}
           <div className="pd-header" style={{ background: 'white', padding: '24px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -135,48 +183,48 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
                 </div>
               </div>
             </div>
-            
-            {/* Start Consultation Button - only show if not completed/canceled */}
-            {!['completed', 'canceled', 'cancelled'].includes((patient.status || '').toLowerCase()) && (
-            <button
-              onClick={async () => {
-                const idToUse = realChildId || patient._id;
-                if (!idToUse) {
-                  alert('Patient ID is missing');
-                  return;
-                }
-                console.log('🔄 Starting consultation for childId:', idToUse);
-                try {
-                  const result = await api.completeConsultation(idToUse);
-                  console.log('✅ Consultation completed:', result);
-                  alert(t('consultationCompleted') || 'Consultation Completed!');
-                  // Close and let Schedule refresh
-                  if (onClose) onClose();
-                } catch (err) {
-                  console.error('❌ Consultation error:', err);
-                  alert(err.message || 'Failed to complete consultation');
-                }
-              }}
-              style={{
-                background: '#00AEC0',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '12px 24px',
-                fontSize: '16px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 11l3 3L22 4"/>
-                <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-              </svg>
-              {t('startConsultation') || 'Start Consultation'}
-            </button>
+
+            {/* Start Consultation Button - only show if not completed/canceled and hideControls is false */}
+            {!hideControls && !['completed', 'canceled', 'cancelled'].includes((patient.status || '').toLowerCase()) && (
+              <button
+                onClick={async () => {
+                  const idToUse = patient.bookingId || patient.childId || realChildId || patient._id;
+                  if (!idToUse) {
+                    alert('Patient ID is missing');
+                    return;
+                  }
+                  console.log('🔄 Starting consultation for childId:', idToUse);
+                  try {
+                    const result = await api.completeConsultation(idToUse);
+                    console.log('✅ Consultation completed:', result);
+                    alert(t('consultationCompleted') || 'Consultation Completed!');
+                    // Close and let Schedule refresh
+                    if (onClose) onClose();
+                  } catch (err) {
+                    console.error('❌ Consultation error:', err);
+                    alert(err.message || 'Failed to complete consultation');
+                  }
+                }}
+                style={{
+                  background: '#00AEC0',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '12px 24px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
+                </svg>
+                {t('startConsultation') || 'Start Consultation'}
+              </button>
             )}
           </div>
 
@@ -185,7 +233,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
             <div className="pd-metric-card">
               <div className="pd-metric-header">
                 <span className="pd-metric-label">{t('growthIndicator')}</span>
-                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
               </div>
               <p className="pd-metric-value">98 %</p>
               <span className="pd-metric-sub"></span>
@@ -194,7 +242,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
             <div className="pd-metric-card">
               <div className="pd-metric-header">
                 <span className="pd-metric-label">{t('headCircumference')}</span>
-                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0 1 7-7h4"/></svg>
+                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="5" /><path d="M3 21v-2a7 7 0 0 1 7-7h4" /></svg>
               </div>
               <p className="pd-metric-value">{headCirc != null ? `${headCirc} cm` : '—'}</p>
               <span className="pd-metric-sub"></span>
@@ -203,7 +251,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
             <div className="pd-metric-card">
               <div className="pd-metric-header">
                 <span className="pd-metric-label">{t('weight')}</span>
-                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /></svg>
               </div>
               <p className="pd-metric-value">{weight != null ? `${weight} kg` : '—'}</p>
               <span className="pd-metric-sub"></span>
@@ -212,7 +260,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
             <div className="pd-metric-card">
               <div className="pd-metric-header">
                 <span className="pd-metric-label">{t('height')}</span>
-                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h4M18 12h4M8 6l4-4 4 4M8 18l4 4 4-4"/></svg>
+                <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h4M18 12h4M8 6l4-4 4 4M8 18l4 4 4-4" /></svg>
               </div>
               <p className="pd-metric-value">{height != null ? `${height} cm` : '—'}</p>
               <span className="pd-metric-sub"></span>
@@ -258,12 +306,15 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
               <img src={bodyFigure} alt="Growth" className="pd-body-figure" />
               <div className="pd-progress-list">
                 {milestones.length > 0 ? milestones.map((m, i) => (
-                  <div className="pd-progress-item" key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                    <input type="checkbox" checked={m.checked} readOnly style={{ width: 18, height: 18, cursor: 'default' }} />
-                    <span style={{ fontSize: 14, color: '#374151' }}>{m.title}</span>
+                  <div className="pd-progress-item" key={i}>
+                    <div className="pd-progress-label-row">
+                      <span className="pd-progress-label">{m.title}</span>
+                      <span className="pd-progress-value">{m.percentage || 0}%</span>
+                    </div>
+                    <div className="pd-progress-bar-bg"><div className="pd-progress-bar-fill" style={{ width: `${m.percentage || 0}%` }}></div></div>
                   </div>
                 )) : (
-                  <div style={{ color: '#9CA3AF', fontSize: 14 }}>{t('noData') || 'No milestones data'}</div>
+                  <div style={{ color: '#9CA3AF', fontSize: 14, textAlign: 'center', width: '100%', padding: '20px 0' }}>{t('noData') || 'No milestones data'}</div>
                 )}
               </div>
             </div>
@@ -281,7 +332,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
                   <div className="pd-vaccine-info">
                     <span className={`pd-vaccine-name ${v.color || 'green'}`}>{v.name || v.label}</span>
                     <span className="pd-vaccine-date">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                       {v.date}
                     </span>
                   </div>
@@ -324,7 +375,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
           <button className="pd-close-btn" onClick={onClose}>
             <svg width="28" height="28" viewBox="0 0 24 24" fill="#E06464" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="10" />
-              <path d="M15 9l-6 6M9 9l6 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M15 9l-6 6M9 9l6 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
         </div>
@@ -334,7 +385,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
           <div className="pd-metric-card">
             <div className="pd-metric-header">
               <span className="pd-metric-label">{t('growthIndicator')}</span>
-              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
             </div>
             <p className="pd-metric-value">98 %</p>
             <span className="pd-metric-sub"></span>
@@ -343,7 +394,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
           <div className="pd-metric-card">
             <div className="pd-metric-header">
               <span className="pd-metric-label">{t('headCircumference')}</span>
-              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0 1 7-7h4"/></svg>
+              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="5" /><path d="M3 21v-2a7 7 0 0 1 7-7h4" /></svg>
             </div>
             <p className="pd-metric-value">{headCirc != null ? `${headCirc} cm` : '—'}</p>
             <span className="pd-metric-sub"></span>
@@ -352,7 +403,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
           <div className="pd-metric-card">
             <div className="pd-metric-header">
               <span className="pd-metric-label">{t('weight')}</span>
-              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/></svg>
+              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y2="6" /></svg>
             </div>
             <p className="pd-metric-value">{weight != null ? `${weight} kg` : '—'}</p>
             <span className="pd-metric-sub"></span>
@@ -361,7 +412,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
           <div className="pd-metric-card">
             <div className="pd-metric-header">
               <span className="pd-metric-label">{t('height')}</span>
-              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h4M18 12h4M8 6l4-4 4 4M8 18l4 4 4-4"/></svg>
+              <svg className="pd-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M2 12h4M18 12h4M8 6l4-4 4 4M8 18l4 4 4-4" /></svg>
             </div>
             <p className="pd-metric-value">{height != null ? `${height} cm` : '—'}</p>
             <span className="pd-metric-sub"></span>
@@ -439,7 +490,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
                 <div className="pd-vaccine-info">
                   <span className={`pd-vaccine-name ${v.color || 'green'}`}>{v.name || v.label}</span>
                   <span className="pd-vaccine-date">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                     {v.date}
                   </span>
                 </div>

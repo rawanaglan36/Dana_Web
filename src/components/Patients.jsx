@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './Patients.css';
 import PatientDetails from './PatientDetails';
 import searchIcon from '../assets/Dana - ضنا_icon/Table/Tags/Icon-1.svg';
@@ -12,6 +13,7 @@ import { api } from '../services/api';
 
 export default function Patients({ setIsSidebarOpen }) {
   const { t, toggleLanguage, language } = useLanguage();
+  const navigate = useNavigate();
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'patient-details'
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,20 +24,41 @@ export default function Patients({ setIsSidebarOpen }) {
 
   const [apiData, setApiData] = useState(null);
   const [loadingPatients, setLoadingPatients] = useState(true);
-  useEffect(() => {
-    api.getPatients()
-      .then(data => { setApiData(data); setLoadingPatients(false); })
-      .catch(() => setLoadingPatients(false));
-  }, []);
+  const [bookingsMap, setBookingsMap] = useState({});
 
-  const patientData = (apiData?.patients ?? []).map(p => ({
-    name: p.childName || 'Unknown',
-    id: p.childRecordID ? `#${p.childRecordID.slice(-6)}` : '—',
-    age: p.age ?? 0,
-    lastVisit: p.lastBookingDate || '',
-    status: p.bookingStatus === 'completed' ? 'Active' : 'Pending',
-    _id: p.childRecordID,
-  }));
+  const refreshData = () => {
+    setLoadingPatients(true);
+    Promise.all([
+      api.getPatients().catch(() => null),
+      api.getBookings().catch(() => []),
+    ]).then(([pData, bData]) => {
+      setApiData(pData);
+      const bMap = {};
+      (Array.isArray(bData) ? bData : []).forEach(b => {
+        const cId = b.childId?._id || b.childId || '';
+        if (cId) bMap[cId] = { bookingId: b._id, time: b.time || '', date: b.date || '', status: b.status || '' };
+      });
+      setBookingsMap(bMap);
+      setLoadingPatients(false);
+    }).catch(() => setLoadingPatients(false));
+  };
+
+  useEffect(() => { refreshData(); }, []);
+
+  const patientData = (apiData?.patients ?? []).map(p => {
+    const booking = bookingsMap[p.childId] || {};
+    return {
+      name: p.childName || 'Unknown',
+      id: p.childRecordID ? `#${p.childRecordID.slice(-6)}` : '—',
+      age: p.age ?? 0,
+      lastVisit: p.lastBookingDate || booking.date || '',
+      status: p.bookingStatus === 'completed' ? 'Active' : 'Pending',
+      _id: p.childRecordID,
+      childId: p.childId,
+      bookingId: booking.bookingId || '',
+      parentId: p.parentId || '',
+    };
+  });
 
   const totalPatientsCount = apiData?.totalPatients ?? patientData.length;
   const needsAttentionCount = apiData?.needsAttention?.total ?? patientData.filter(p => p.status === 'Pending').length;
@@ -44,13 +67,100 @@ export default function Patients({ setIsSidebarOpen }) {
   return (
     <div className="patients-dashboard">
       {viewMode === 'patient-details' && selectedPatient ? (
-        <div style={{ width: '100%', height: '100vh', overflow: 'auto', background: '#F2F2F2' }}>
-          <PatientDetails
-            patient={selectedPatient}
-            onClose={() => { setSelectedPatient(null); setViewMode('list'); }}
-            isFullPage={true}
-          />
-        </div>
+        <>
+          {/* Main Header */}
+          <header className="patients-header">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <button className="hamburger-btn" onClick={() => setIsSidebarOpen && setIsSidebarOpen(true)}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+              </button>
+              <h1>{t('patients')}</h1>
+            </div>
+            <div className="header-actions">
+              <button className="icon-btn-rounded" title="Language Toggle" onClick={toggleLanguage}>
+                <img src={languageIcon} alt="Language" width="22" height="22" />
+              </button>
+              <button className="icon-btn-rounded notification-btn" onClick={() => showToast(t('noNotifications'))}>
+                <img src={notificationIcon} alt="Notifications" width="24" height="24" />
+                <img src={badgeIcon} alt="" className="notification-badge" />
+              </button>
+              <div className="avatar">AO</div>
+            </div>
+          </header>
+
+          {/* Sub Header - Breadcrumb + Actions */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                onClick={() => { setSelectedPatient(null); setViewMode('list'); }}
+                style={{ color: '#6B7280', fontSize: '14px', cursor: 'pointer' }}
+              >
+                {t('patients') || 'Patients'} \
+              </span>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827', marginLeft: '4px' }}>
+                {t('childProfile') || 'Child Profile'}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              {/* Message Button */}
+              <button 
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    patientName: selectedPatient.name || '',
+                    parentId: selectedPatient.parentId || '',
+                    childId: selectedPatient.childId || '',
+                  });
+                  navigate(`/dashboard/messages?${params.toString()}`);
+                }}
+                style={{
+                background: 'white', color: '#00AEC0', border: '1px solid #00AEC0', borderRadius: '24px',
+                padding: '8px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
+              }}>
+                {t('message') || 'Message'}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/>
+                  <path d="M7 9h10v2H7zM7 12h7v2H7z"/>
+                </svg>
+              </button>
+
+              {/* Complete Consultation Button */}
+              {!['completed', 'canceled', 'cancelled', 'active'].includes((selectedPatient.status || '').toLowerCase()) && (
+                <button
+                  onClick={async () => {
+                    const bookingId = selectedPatient.bookingId;
+                    if (!bookingId) {
+                      showToast('No booking ID found for this patient');
+                      return;
+                    }
+                    try {
+                      await api.completeConsultation(bookingId);
+                      showToast(t('consultationCompleted') || 'Consultation Completed!');
+                      setSelectedPatient(null);
+                      setViewMode('list');
+                      refreshData();
+                    } catch (err) {
+                      showToast(err.message || 'Failed to complete consultation');
+                    }
+                  }}
+                  style={{ background: '#00AEC0', color: 'white', border: 'none', borderRadius: '24px', padding: '9px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  {t('completeConsultation') || 'Complete Consultation'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Patient Details Content */}
+          <div style={{ flex: 1, margin: '-24px', marginTop: 0 }}>
+            <PatientDetails
+              patient={selectedPatient}
+              onClose={() => { setSelectedPatient(null); setViewMode('list'); }}
+              isFullPage={true}
+              hideControls={true}
+            />
+          </div>
+        </>
       ) : (
         <>
           <header className="patients-header">

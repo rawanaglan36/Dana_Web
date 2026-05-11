@@ -493,7 +493,7 @@
 
 .profile-cover {
   height: 120px;
-  background: #E8F8F9;
+  background: linear-gradient(135deg, #004951 0%, #006B7A 100%);
   position: relative;
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
@@ -505,10 +505,10 @@
   content: '';
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-image: linear-gradient(45deg, rgba(0, 174, 192, 0.1) 25%, transparent 25%, transparent 75%, rgba(0, 174, 192, 0.1) 75%, rgba(0, 174, 192, 0.1)), linear-gradient(45deg, rgba(0, 174, 192, 0.1) 25%, transparent 25%, transparent 75%, rgba(0, 174, 192, 0.1) 75%, rgba(0, 174, 192, 0.1));
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 75%, rgba(255, 255, 255, 0.05)), linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%, transparent 75%, rgba(255, 255, 255, 0.05) 75%, rgba(255, 255, 255, 0.05));
   background-size: 20px 20px;
   background-position: 0 0, 10px 10px;
-  opacity: 0.2;
+  opacity: 0.3;
 }
 
 .profile-close-btn {
@@ -541,8 +541,8 @@
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: #FEE2E2;
-  color: #F87171;
+  background: #FDDCCC;
+  color: #E8875A;
   display: flex;
   align-items: center;
   justify-content: center;

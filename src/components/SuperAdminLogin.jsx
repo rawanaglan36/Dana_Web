@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
+import { api } from '../services/api';
 
 export default function SuperAdminLogin() {
   const navigate = useNavigate();
@@ -34,14 +35,9 @@ export default function SuperAdminLogin() {
 
     setIsSubmitting(true);
     try {
-      // Mocking Super Admin login since there is no specific endpoint defined yet
-      console.log('Super Admin Login attempted with:', { email, password });
-      
-      // We can just simulate success and navigate to super admin dashboard
-      setTimeout(() => {
-         navigate('/super-admin');
-      }, 500);
-
+      console.log('Super Admin Login attempted with:', { email });
+      await api.adminSignIn({ email, password });
+      navigate('/super-admin');
     } catch (err) {
       console.error('❌ Login failed:', err);
       setApiError(err.message || 'Login failed');
