@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import './Settings.css';
 import coverImg from '../assets/Dana - ضنا_img/Image.png';
 import { useLanguage } from '../context/LanguageContext';
@@ -22,6 +23,9 @@ export default function Settings({ setIsSidebarOpen }) {
   const [cancelEntireDay, setCancelEntireDay] = useState(false);
   const [selectedCancelSlots, setSelectedCancelSlots] = useState([]);
   const [pendingAvailabilityPayload, setPendingAvailabilityPayload] = useState(null);
+  const [affectedBookings, setAffectedBookings] = useState([]);
+  const [pendingChangedDay, setPendingChangedDay] = useState(null);
+  const [loadingBookings, setLoadingBookings] = useState(false);
 
   const [notifications, setNotifications] = useState({
     appointmentNotification: false,
@@ -294,10 +298,69 @@ export default function Settings({ setIsSidebarOpen }) {
           consultTime: availability.consultTime
         };
         
-        // Show warning modal instead of saving directly
-        setPendingAvailabilityPayload(payload);
-        setShowWarningModal(true);
-        return; // Early return to avoid immediate save and button loading state
+        // Fetch real bookings to check for conflicts
+        setLoadingBookings(true);
+        try {
+          const bookingsData = await api.getBookings();
+          const allBookings = Array.isArray(bookingsData) ? bookingsData : (bookingsData?.bookings || []);
+          
+          // Find bookings that fall on dates being changed
+          // Find bookings that fall on dates being changed
+          const todayStr = new Date().toISOString().split('T')[0];
+          const daysOfWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          
+          // Check which bookings have confirmed/waiting status and match affected dates/times
+          const conflicting = allBookings.filter(b => {
+            if (!b.date || !b.time) return false;
+            const bookingDate = b.date.split('T')[0];
+            // Only care about today or future bookings
+            if (bookingDate < todayStr) return false;
+            
+            const bookingStatus = (b.status || '').toLowerCase();
+            if (!['confirmed', 'waiting', 'pending'].includes(bookingStatus)) return false;
+
+            const bDayIndex = new Date(bookingDate).getDay();
+            const bookingDayName = daysOfWeek[bDayIndex];
+
+            // If the entire day is now turned off, it's a conflict
+            if (!workingDays[bookingDayName]) {
+              return true;
+            }
+
+            // If the day is on, check if the specific time slot was removed
+            const generatedTimes = generateTimeSlots(
+              dayTimes[bookingDayName].from,
+              dayTimes[bookingDayName].to,
+              availability.consultTime
+            );
+            
+            // Format booking time to 24h to match generated slots
+            const bTime24h = formatTimeTo24h(b.time);
+            
+            if (!generatedTimes.includes(bTime24h)) {
+              return true;
+            }
+
+            return false;
+          });
+          
+          if (conflicting.length > 0) {
+            setAffectedBookings(conflicting);
+            setPendingAvailabilityPayload(payload);
+            setCancelEntireDay(false);
+            setSelectedCancelSlots([]);
+            setShowWarningModal(true);
+            setLoadingBookings(false);
+            setIsSaving(false);
+            return; // Early return to show modal
+          }
+        } catch (err) {
+          console.warn('Could not check bookings:', err);
+        }
+        setLoadingBookings(false);
+        
+        // No conflicts - save directly
+        await api.updateDoctorAppointments(payload);
       }
     } catch (err) {
       console.error('Error saving settings:', err);
@@ -309,10 +372,30 @@ export default function Settings({ setIsSidebarOpen }) {
     setIsSaving(true);
     setShowWarningModal(false);
     try {
-      await api.updateDoctorAppointments(pendingAvailabilityPayload);
-      // In a real scenario, handle cancellations based on cancelEntireDay and selectedCancelSlots here
-      console.log('Cancelled entire day:', cancelEntireDay);
-      console.log('Cancelled slots:', selectedCancelSlots);
+      // Build cancellation info
+      const cancellationData = {
+        ...pendingAvailabilityPayload,
+        cancelEntireDay,
+        cancelledSlots: cancelEntireDay 
+          ? affectedBookings.map(b => b._id) 
+          : selectedCancelSlots,
+        affectedBookingIds: cancelEntireDay
+          ? affectedBookings.map(b => b._id)
+          : affectedBookings
+              .filter(b => {
+                const bookingTime = b.time || '';
+                return selectedCancelSlots.includes(bookingTime);
+              })
+              .map(b => b._id),
+      };
+      
+      console.log('Saving availability with cancellation:', cancellationData);
+      await api.updateDoctorAppointments(cancellationData);
+      
+      // Reset modal state
+      setAffectedBookings([]);
+      setCancelEntireDay(false);
+      setSelectedCancelSlots([]);
     } catch (err) {
       console.error('Error saving availability:', err);
     }
@@ -608,7 +691,7 @@ export default function Settings({ setIsSidebarOpen }) {
       </div>
 
       {/* Warning Modal */}
-      {showWarningModal && (
+      {showWarningModal && createPortal(
         <div className="warning-modal-overlay">
           <div className="warning-modal-content">
             <div className="warning-modal-header">
@@ -646,34 +729,40 @@ export default function Settings({ setIsSidebarOpen }) {
                   <h4 style={{ color: '#F49E25' }}>Cancel specific time slots</h4>
                 </div>
                 <div className="time-slots-grid">
-                  {['10:00 AM', '10:30 AM', '11:00 AM', '11:30 AM', '12:00 AM', '12:30 AM', '01:00 AM', '01:30 AM'].map(time => {
-                    const isSelected = selectedCancelSlots.includes(time);
-                    return (
-                      <div 
-                        key={time} 
-                        className={`time-slot-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          if (cancelEntireDay) return;
-                          if (isSelected) {
-                            setSelectedCancelSlots(prev => prev.filter(t => t !== time));
-                          } else {
-                            setSelectedCancelSlots(prev => [...prev, time]);
-                          }
-                        }}
-                      >
-                        <div className="time-slot-content">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px', color: '#00AEC0'}}>
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <polyline points="12 6 12 12 16 14"></polyline>
-                          </svg>
-                          <span>{time}</span>
+                  {affectedBookings.length > 0 ? (
+                    [...new Set(affectedBookings.map(b => b.time || b.appointmentTime).filter(Boolean))].map(time => {
+                      const isSelected = selectedCancelSlots.includes(time);
+                      return (
+                        <div 
+                          key={time} 
+                          className={`time-slot-item ${isSelected ? 'selected' : ''}`}
+                          onClick={() => {
+                            if (cancelEntireDay) return;
+                            if (isSelected) {
+                              setSelectedCancelSlots(prev => prev.filter(t => t !== time));
+                            } else {
+                              setSelectedCancelSlots(prev => [...prev, time]);
+                            }
+                          }}
+                        >
+                          <div className="time-slot-content">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: '6px', color: '#00AEC0'}}>
+                              <circle cx="12" cy="12" r="10"></circle>
+                              <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>{time}</span>
+                          </div>
+                          <div className={`radio-circle ${isSelected ? 'checked' : ''}`}>
+                            {isSelected && <div className="inner-circle"></div>}
+                          </div>
                         </div>
-                        <div className={`radio-circle ${isSelected ? 'checked' : ''}`}>
-                          {isSelected && <div className="inner-circle"></div>}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : (
+                    <div style={{ padding: '20px', color: '#6B7280', fontSize: '14px', gridColumn: '1 / -1', textAlign: 'center' }}>
+                      No specific time slots found.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -687,7 +776,8 @@ export default function Settings({ setIsSidebarOpen }) {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

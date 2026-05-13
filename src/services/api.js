@@ -20,6 +20,42 @@ export const authStorage = {
     localStorage.removeItem('dana_access_token');
     localStorage.removeItem('dana_doctor_id');
   },
+  // Super Admin specific
+  setSuperAdminToken(token) {
+    localStorage.setItem('dana_sa_token', token);
+  },
+  getSuperAdminToken() {
+    return localStorage.getItem('dana_sa_token');
+  },
+  setSuperAdminData(data) {
+    localStorage.setItem('dana_sa_data', JSON.stringify(data));
+  },
+  getSuperAdminData() {
+    try { return JSON.parse(localStorage.getItem('dana_sa_data')); } catch { return null; }
+  },
+  clearSuperAdmin() {
+    localStorage.removeItem('dana_sa_token');
+    localStorage.removeItem('dana_sa_data');
+    localStorage.removeItem('dana_super_admin');
+  },
+  isSuperAdminLoggedIn() {
+    const token = localStorage.getItem('dana_sa_token');
+    if (!token) return false;
+    // Check if JWT is expired
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        // Token expired — clear it
+        localStorage.removeItem('dana_sa_token');
+        localStorage.removeItem('dana_sa_data');
+        localStorage.removeItem('dana_super_admin');
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  },
 };
 
 // Helper to get the active doctor ID (from login or fallback)
@@ -175,8 +211,15 @@ export const api = {
     if (!res.ok) {
       throw new Error(json.response?.message || json.message || 'Admin login failed');
     }
-    if (json.accessToken?.access_token || json.access_token) {
-      authStorage.setToken(json.accessToken?.access_token || json.access_token);
+    const token = json.accessToken?.access_token || json.access_token;
+    if (token) {
+      authStorage.setSuperAdminToken(token);
+      authStorage.setToken(token);
+    }
+    // Store admin profile data
+    const adminData = json.response?.data || json.data || null;
+    if (adminData) {
+      authStorage.setSuperAdminData(adminData);
     }
     localStorage.setItem('dana_super_admin', 'true');
     return json;
@@ -377,14 +420,18 @@ export const api = {
     return json.response?.data || json.data || json || [];
   },
 
-  // Complete Consultation - PATCH
+  // Complete Consultation - PATCH /v1/doctor/booking/:bookingId/compelete-consultation
+  // Changes booking status from pending → completed
   async completeConsultation(bookingId) {
     const res = await fetch(`${API_BASE}/v1/doctor/booking/${bookingId}/compelete-consultation`, {
       method: 'PATCH',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
     });
     const json = await res.json();
-    return json.response?.data || null;
+    if (!res.ok) {
+      throw new Error(json.response?.message || json.message || 'Failed to complete consultation');
+    }
+    return json.response?.data || json.data || json;
   },
 
   // Settings - Update Doctor Profile Image
@@ -490,6 +537,19 @@ export const api = {
     });
     const json = await res.json();
     return json.response?.data || json;
+  },
+
+  // Delete a message
+  async deleteMessage(messageId) {
+    const res = await fetch(`${API_BASE}/v1/chat/messages/${messageId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json.message || 'Failed to delete message');
+    }
+    return res.json();
   },
 
   // Get unread messages for receiver (doctor)

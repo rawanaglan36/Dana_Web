@@ -336,7 +336,8 @@
 }
 
 .card-action-btn.profile:hover {
-  background: #F0FBFC;
+  background: var(--color-primary-default, #00AEC0);
+  color: white !important;
 }
 /* Completed Card Styling */
 .appointment-card.completed-card {
@@ -366,14 +367,14 @@
 }
 
 .appointment-card.completed-card .card-action-btn.profile {
-  background: rgba(255, 255, 255, 0.15);
+  background: transparent;
   color: white;
   border: 1px solid white;
 }
 
 .appointment-card.completed-card .card-action-btn.profile:hover {
-  background: white;
-  color: var(--color-primary-default, #00AEC0);
+  background: white !important;
+  color: var(--color-primary-default, #00AEC0) !important;
 }
 
 
@@ -508,5 +509,80 @@
 
   .pd-vaccine-grid {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* Responsive Patient Details Header in Schedule */
+.patient-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: white;
+  border-bottom: 1px solid #E5E7EB;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.patient-details-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pd-message-btn {
+  background: white;
+  color: #00AEC0;
+  border: 1.5px solid #00AEC0;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.pd-complete-btn {
+  background: #00AEC0;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  transition: opacity 0.2s;
+}
+
+.pd-message-btn:hover, .pd-complete-btn:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 768px) {
+  .patient-details-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+  }
+  
+  .patient-details-actions {
+    width: 100%;
+  }
+
+  .pd-message-btn, .pd-complete-btn {
+    flex: 1;
   }
 }

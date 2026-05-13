@@ -5,10 +5,10 @@
   background: rgba(0, 0, 0, 0.35);
   z-index: 100;
   display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
+  justify-content: flex-end;
+  align-items: center;
   animation: fadeIn 0.25s ease;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 @keyframes fadeIn {
@@ -16,22 +16,17 @@
   to { opacity: 1; }
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideInLeft {
-  from { transform: translateX(-100%); }
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
 
 .patient-details-panel {
   width: 700px;
   max-width: 95vw;
-  max-height: calc(100vh - 40px);
+  height: calc(100vh - 40px);
   background: #F2F2F2;
-  border-radius: 0 24px 24px 0;
+  border-radius: 24px;
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -39,10 +34,9 @@
   overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  animation: slideInLeft 0.3s ease;
-  position: fixed;
-  top: 20px;
-  left: 0;
+  animation: slideInRight 0.3s ease;
+  position: relative;
+  margin-right: 20px;
 }
 
 /* Scrollbar styling */
@@ -419,4 +413,48 @@
 .pd-vaccine-date svg {
   width: 12px;
   height: 12px;
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 1024px) {
+  .pd-metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .patient-details-panel {
+    width: 95%;
+    margin-right: 2.5%;
+    height: 95vh;
+  }
+  .pd-vaccine-grid {
+    grid-template-columns: 1fr;
+  }
+  .pd-chart-legend {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .patient-details-panel {
+    width: 100%;
+    margin: 0;
+    height: 100vh;
+    border-radius: 0;
+  }
+  .patient-details-overlay {
+    justify-content: center;
+  }
+  .pd-metrics-row {
+    grid-template-columns: 1fr;
+  }
+  .pd-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pd-close-btn {
+    top: -10px;
+  }
 }

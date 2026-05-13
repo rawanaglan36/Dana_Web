@@ -321,32 +321,19 @@
   gap: 24px;
 }
 
-.otp-inputs-wrapper {
+.otp-inputs {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  gap: 14px;
   justify-content: center;
 }
 
-.otp-dash {
-  font-size: 24px;
-  font-weight: 500;
-  color: #9CA3AF;
-  user-select: none;
-}
-
-.otp-inputs {
-  display: flex;
-  gap: 12px;
-}
-
 .otp-input {
-  width: 52px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
   border: 1.5px solid #D1D5DB;
-  border-radius: 12px;
+  border-radius: 14px;
   text-align: center;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   font-family: var(--font-family);
   color: #111827;
@@ -490,9 +477,10 @@
   }
 
   .otp-input {
-    width: 44px;
-    height: 44px;
-    font-size: 18px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+    border-radius: 12px;
   }
 
   .otp-inputs {

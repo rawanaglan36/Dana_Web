@@ -86,14 +86,18 @@ const translations = {
     signupSuccess: "Account created successfully!",
 
     // OTP
-    verifyNumber: "Verify Your Number",
+    verifyNumber: "Verify Your Email",
     otpSubtitle: "A verification code has been sent to your Phone number ending in 4567. Enter it below to confirm your identity.",
+    otpSubtitleEmail: "A verification code has been sent to your Email ending in {{email}}. Enter it below to confirm your identity.",
+    otpSubtitlePhone: "A verification code has been sent to your Phone number ending in {{phone}}. Enter it below to confirm your identity.",
     resendCodeIn: "Resend code in",
     didntReceive: "Didn't receive the code?",
     resendCode: "Resend Code",
     enterCompleteCode: "Please enter the complete 6-digit code",
     wrongNumber: "Wrong number?",
+    wrongUsername: "Wrong Username?",
     changePhone: "Change Phone Number",
+    changeEmail: "Change Email",
 
     // Done
     applicationSubmitted: "Application Submitted Successfully!",
@@ -163,6 +167,11 @@ const translations = {
     savedMessages: "Saved messages",
     showMore: "Show more",
     you: "You",
+    noContactsFound: "No contacts found",
+    loadingMessages: "Loading messages...",
+    noMessagesYet: "No messages yet. Start the conversation!",
+    noSavedMessages: "No saved messages yet",
+    totalPatients: "Total Patients",
 
     // Settings
     profileClinic: "Profile & Clinic",
@@ -303,14 +312,18 @@ const translations = {
     signupSuccess: "تم إنشاء الحساب بنجاح!",
 
     // OTP
-    verifyNumber: "تحقق من رقمك",
+    verifyNumber: "تحقق من بريدك الإلكتروني",
     otpSubtitle: "تم إرسال رمز التحقق إلى رقم هاتفك المنتهي بـ 4567. أدخله أدناه لتأكيد هويتك.",
+    otpSubtitleEmail: "تم إرسال رمز التحقق إلى بريدك الإلكتروني المنتهي بـ {{email}}. أدخله أدناه لتأكيد هويتك.",
+    otpSubtitlePhone: "تم إرسال رمز التحقق إلى رقم هاتفك المنتهي بـ {{phone}}. أدخله أدناه لتأكيد هويتك.",
     resendCodeIn: "إعادة إرسال الرمز خلال",
     didntReceive: "لم تستلم الرمز؟",
     resendCode: "إعادة الإرسال",
     enterCompleteCode: "يرجى إدخال الرمز المكون من 6 أرقام بالكامل",
     wrongNumber: "رقم خاطئ؟",
+    wrongUsername: "اسم مستخدم خاطئ؟",
     changePhone: "تغيير رقم الهاتف",
+    changeEmail: "تغيير البريد الإلكتروني",
 
     // Done
     applicationSubmitted: "تم تقديم الطلب بنجاح!",
@@ -380,6 +393,11 @@ const translations = {
     savedMessages: "الرسائل المحفوظة",
     showMore: "عرض المزيد",
     you: "أنت",
+    noContactsFound: "لا توجد جهات اتصال",
+    loadingMessages: "جاري تحميل الرسائل...",
+    noMessagesYet: "لا توجد رسائل بعد. ابدأ المحادثة!",
+    noSavedMessages: "لا توجد رسائل محفوظة",
+    totalPatients: "إجمالي المرضى",
 
     // Settings
     profileClinic: "الملف الشخصي والعيادة",

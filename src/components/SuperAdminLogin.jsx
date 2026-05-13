@@ -1,24 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
 
 export default function SuperAdminLogin() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [apiError, setApiError] = useState('');
 
+  // If already logged in with a valid token, redirect to dashboard
+  useEffect(() => {
+    if (authStorage.isSuperAdminLoggedIn()) {
+      navigate('/super-admin', { replace: true });
+    }
+  }, [navigate]);
+
+  // Load saved email if remember me was checked before
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('dana_sa_remember_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
   const validate = () => {
     const newErrors = {};
-    const emailStr = email.trim();
-    if (!emailStr) {
+    if (!email.trim()) {
       newErrors.email = t('emailRequired') || 'Email/Phone is required';
-    } 
-
+    }
     if (!password) {
       newErrors.password = t('passwordRequired') || 'Password is required';
     } else if (password.length < 6) {
@@ -35,8 +50,14 @@ export default function SuperAdminLogin() {
 
     setIsSubmitting(true);
     try {
-      console.log('Super Admin Login attempted with:', { email });
       await api.adminSignIn({ email, password });
+
+      if (rememberMe) {
+        localStorage.setItem('dana_sa_remember_email', email.trim());
+      } else {
+        localStorage.removeItem('dana_sa_remember_email');
+      }
+
       navigate('/super-admin');
     } catch (err) {
       console.error('❌ Login failed:', err);
@@ -55,9 +76,9 @@ export default function SuperAdminLogin() {
       <form className="login-form" onSubmit={handleLogin}>
         <div className="form-group">
           <label>Email or Username</label>
-          <input 
-            type="text" 
-            placeholder="superadmin@dana.com" 
+          <input
+            type="text"
+            placeholder="superadmin@dana.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={errors.email ? 'error-input' : ''}
@@ -67,14 +88,25 @@ export default function SuperAdminLogin() {
 
         <div className="form-group">
           <label>Password</label>
-          <input 
-            type="password" 
+          <input
+            type="password"
             placeholder="••••••••"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={errors.password ? 'error-input' : ''}
           />
           {errors.password && <span className="error-text">{errors.password}</span>}
+        </div>
+
+        <div className="remember-forgot-row">
+          <label className="remember-me-label">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Remember Me
+          </label>
         </div>
 
         {apiError && (

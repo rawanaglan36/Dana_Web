@@ -3,6 +3,25 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 
+// Mask email: show only last few chars before @ and full domain
+function maskEmail(email) {
+  if (!email || !email.includes('@')) return email || '';
+  const [local, domain] = email.split('@');
+  if (local.length <= 4) {
+    return '*'.repeat(local.length) + '@' + domain;
+  }
+  const visible = local.slice(-4);
+  return '*'.repeat(local.length - 4) + visible + '@' + domain;
+}
+
+// Mask phone: show only last 4 digits
+function maskPhone(phone) {
+  if (!phone) return '';
+  const cleaned = phone.replace(/\D/g, '');
+  if (cleaned.length <= 4) return phone;
+  return '*'.repeat(cleaned.length - 4) + cleaned.slice(-4);
+}
+
 export default function OTP() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -18,6 +37,10 @@ export default function OTP() {
   const phone = location.state?.phone || '';
   const password = location.state?.password || '';
   const fromRoute = location.state?.from || '';
+
+  // Determine if input was email or phone
+  const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(phone);
+  const maskedIdentifier = isEmail ? maskEmail(phone) : maskPhone(phone);
 
   // Countdown timer
   useEffect(() => {
@@ -144,29 +167,33 @@ export default function OTP() {
     <div className="login-form-container otp-container">
       <div className="form-header">
         <h1>{t('verifyNumber')}</h1>
-        <p>{t('otpSubtitle')}</p>
+        <p>
+          {isEmail
+            ? (t('otpSubtitleEmail') || '').replace('{{email}}', maskedIdentifier)
+              || `A verification code has been sent to your Email ending in ${maskedIdentifier}. Enter it below to confirm your identity.`
+            : (t('otpSubtitlePhone') || '').replace('{{phone}}', maskedIdentifier)
+              || `A verification code has been sent to your Phone number ending in ${maskedIdentifier}. Enter it below to confirm your identity.`
+          }
+        </p>
       </div>
 
       <form className="otp-form" onSubmit={handleSubmit}>
-        <div className="otp-inputs-wrapper">
-          <span className="otp-dash">—</span>
-          <div className="otp-inputs" onPaste={handlePaste}>
-            {otp.map((digit, index) => (
-              <input
-                key={index}
-                id={`otp-input-${index}`}
-                ref={el => inputRefs.current[index] = el}
-                type="text"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(e) => handleChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className={`otp-input ${digit ? 'otp-input-filled' : ''} ${error ? 'otp-input-error' : ''}`}
-                autoComplete="one-time-code"
-              />
-            ))}
-          </div>
+        <div className="otp-inputs" onPaste={handlePaste}>
+          {otp.map((digit, index) => (
+            <input
+              key={index}
+              id={`otp-input-${index}`}
+              ref={el => inputRefs.current[index] = el}
+              type="text"
+              inputMode="numeric"
+              maxLength={1}
+              value={digit}
+              onChange={(e) => handleChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              className={`otp-input ${digit ? 'otp-input-filled' : ''} ${error ? 'otp-input-error' : ''}`}
+              autoComplete="one-time-code"
+            />
+          ))}
         </div>
 
         {error && <span className="error-text otp-error">{error}</span>}
@@ -185,7 +212,19 @@ export default function OTP() {
       </form>
 
       <div className="otp-footer">
-        <p>{t('wrongNumber')} <a href="#" onClick={(e) => { e.preventDefault(); navigate('/apply'); }}>{t('changePhone')}</a></p>
+        <p>
+          {isEmail
+            ? (t('wrongUsername') || 'Wrong Username?')
+            : (t('wrongNumber') || 'Wrong number?')
+          }
+          {' '}
+          <a href="#" onClick={(e) => { e.preventDefault(); navigate(fromRoute === 'login' ? '/' : '/apply'); }}>
+            {isEmail
+              ? (t('changeEmail') || 'Change Email')
+              : (t('changePhone') || 'Change Phone Number')
+            }
+          </a>
+        </p>
       </div>
     </div>
   );

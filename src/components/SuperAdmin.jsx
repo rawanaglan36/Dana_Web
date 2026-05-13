@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import './SuperAdmin.css';
-import { api } from '../services/api';
+import { api, authStorage } from '../services/api';
 import searchIcon from '../assets/Dana - ضنا_icon/Table/Tags/Icon-1.svg';
 
 export default function SuperAdmin({ setIsSidebarOpen }) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
@@ -141,6 +143,31 @@ export default function SuperAdmin({ setIsSidebarOpen }) {
           <h1>Platform Overview</h1>
         </div>
         <div className="sa-header-actions">
+          <button
+            onClick={() => {
+              authStorage.clearSuperAdmin();
+              navigate('/super-admin-login', { replace: true });
+            }}
+            style={{
+              background: 'none',
+              border: '1px solid #E5E7EB',
+              borderRadius: '10px',
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#64748B',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#FEE2E2'; e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.borderColor = '#FECACA'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#64748B'; e.currentTarget.style.borderColor = '#E5E7EB'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+            Logout
+          </button>
           <div className="sa-avatar">SA</div>
         </div>
       </header>

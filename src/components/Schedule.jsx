@@ -11,58 +11,141 @@ import avatarImg from '../assets/Dana - ضنا_img/source/image.png';
 import chevronIcon from '../assets/Dana - ضنا_icon/Table/Tags/Icon.svg';
 import emptyStateImg from '../assets/Dana - ضنا_img/_Empty state item.png';
 import arrowNavIcon from '../assets/Dana - ضنا_icon/vuesax copy 2/outline/arrow-down.svg';
+import NotificationBell from './NotificationBell';
+import { useNotifications } from '../context/NotificationContext';
 
 export default function Schedule({ setIsSidebarOpen }) {
   const { t, toggleLanguage } = useLanguage();
+  const { doctorInitial, doctorProfilePic } = useNotifications();
   const [apiData, setApiData] = useState(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
 
-  useEffect(() => {
-    api.getPatients()
-      .then(data => { setApiData(data); setLoadingSchedule(false); })
-      .catch(() => setLoadingSchedule(false));
-  }, []);
+  const [rawBookings, setRawBookings] = useState([]);
 
-  const appointments = (apiData?.patients ?? []).filter(p => p.childRecordID).map((p) => ({
-    id: p.childRecordID,
-    name: p.childName || p.name || 'Unknown',
-    age: p.age ?? '',
-    time: '',
-    date: p.lastBookingDate || '',
-    fileId: `#${p.childRecordID?.slice(-6) || 'N/A'}`,
-    status: p.bookingStatus,
-    _id: p.childId || p.childRecordID,
-    bookingId: p.childRecordID,
-  }));
+  const refreshData = () => {
+    setLoadingSchedule(true);
+    Promise.all([
+      api.getPatients().catch(() => null),
+      api.getBookings().catch(() => []),
+    ]).then(([pData, bData]) => {
+      setApiData(pData);
+      setRawBookings(Array.isArray(bData) ? bData : []);
+      setLoadingSchedule(false);
+    }).catch(() => setLoadingSchedule(false));
+  };
+
+  useEffect(() => { refreshData(); }, []);
+
+  // Build a patient lookup from the patients API for enriching booking data
+  const patientsLookup = {};
+  (apiData?.patients ?? []).forEach(p => {
+    if (p.childId) patientsLookup[p.childId] = p;
+  });
+
+  // Build appointments from ALL bookings (not just one per child)
+  const appointments = rawBookings.map((b) => {
+    const childId = b.childId?._id || b.childId || '';
+    const patientInfo = patientsLookup[childId] || {};
+    const childName = b.childId?.childName || patientInfo.childName || patientInfo.name || 'Unknown';
+    const childAge = b.childId?.birthDate
+      ? Math.floor((Date.now() - new Date(b.childId.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : (patientInfo.age ?? '');
+    return {
+      id: patientInfo.childRecordID || b._id,
+      name: childName,
+      age: childAge,
+      time: b.time || '',
+      date: b.date || patientInfo.lastBookingDate || '',
+      fileId: `#${(patientInfo.childRecordID || b._id || '').slice(-6)}`,
+      status: b.status || patientInfo.bookingStatus || '',
+      _id: childId || b._id,
+      bookingId: b._id,
+      childId: childId,
+    };
+  });
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const dateOptions = ['Today, 8 April', 'Tomorrow, 9 April', '10 April', '11 April'];
-  const [dateIndex, setDateIndex] = useState(0);
+
+  // Dynamic date selector - defaults to today
+  const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const formatDateLabel = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const dayLabel = `${d.getDate()} ${months[d.getMonth()]}`;
+
+    if (d.getTime() === today.getTime()) return `Today, ${dayLabel}`;
+    if (d.getTime() === tomorrow.getTime()) return `Tomorrow, ${dayLabel}`;
+    return dayLabel;
+  };
+
+  const navigateDate = (offset) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + offset);
+    setSelectedDate(newDate);
+    setCurrentPage(1);
+  };
+
+  // Format selected date to YYYY-MM-DD for comparison with API dates
+  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+
   const [selectedChild, setSelectedChild] = useState(null);
   const [viewMode, setViewMode] = useState('schedule');
+  const [currentConsultation, setCurrentConsultation] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
   const [toastMsg, setToastMsg] = useState('');
   const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
 
+  // Filter by date first, then by status
+  const dateFilteredAppointments = appointments.filter(a => {
+    if (!a.date) return false; // Skip bookings without a date
+    // Compare YYYY-MM-DD format
+    const apptDate = a.date.split('T')[0]; // Handle ISO dates
+    return apptDate === selectedDateStr;
+  });
+
   const filteredAppointments = statusFilter === 'all'
-    ? appointments
-    : appointments.filter(a => a.status.toLowerCase() === statusFilter.toLowerCase());
+    ? dateFilteredAppointments
+    : dateFilteredAppointments.filter(a => {
+        const qStatus = statusFilter.toLowerCase();
+        const itemStatus = (a.status || '').toLowerCase();
+        if (qStatus === 'waiting') {
+          return itemStatus === 'pending' || itemStatus === 'waiting';
+        }
+        return itemStatus === qStatus;
+      });
+
+  const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / itemsPerPage));
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const [viewState, setViewState] = useState('grid');
   const isActuallyEmpty = !loadingSchedule && filteredAppointments.length === 0;
 
   const handleCompleteConsultation = async () => {
-    if (currentConsultation?._id) {
+    const bookingId = currentConsultation?.bookingId;
+    if (bookingId) {
       setLoadingSchedule(true);
       try {
-        // endpoint needs childId not bookingId
-        const childId = currentConsultation._id;
-        await api.completeConsultation(childId);
+        await api.completeConsultation(bookingId);
         showToast(t('consultationCompleted') || 'Consultation Completed');
+        refreshData();
       } catch (err) {
-        // Ignore errors or show toast
+        showToast(err.message || 'Failed to complete consultation');
       }
       setLoadingSchedule(false);
+    } else {
+      showToast('No booking ID found');
     }
     setViewState('grid');
     setCurrentConsultation(null);
@@ -102,11 +185,10 @@ export default function Schedule({ setIsSidebarOpen }) {
         <button className="icon-btn-rounded" title="Language Toggle" onClick={toggleLanguage}>
           <img src={languageIcon} alt="Language" width="22" height="22" />
         </button>
-        <button className="icon-btn-rounded notification-btn" onClick={() => showToast(t('noNotifications'))}>
-          <img src={notificationIcon} alt="Notifications" width="24" height="24" />
-          <img src={badgeIcon} alt="" className="notification-badge" />
-        </button>
-        <div className="avatar">AO</div>
+        <NotificationBell />
+        <div className="avatar" style={{ overflow: 'hidden' }}>
+          {doctorProfilePic ? <img src={doctorProfilePic} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : doctorInitial}
+        </div>
       </div>
     </header>
   );
@@ -128,7 +210,7 @@ export default function Schedule({ setIsSidebarOpen }) {
               {['all', 'Waiting', 'Completed', 'cancelled'].map(s => (
                 <div
                   key={s}
-                  onClick={() => { setStatusFilter(s); setShowStatusDropdown(false); }}
+                  onClick={() => { setStatusFilter(s); setShowStatusDropdown(false); setCurrentPage(1); }}
                   style={{ padding: '10px 16px', cursor: 'pointer', fontSize: 14, color: statusFilter === s ? '#00AEC0' : '#374151', background: statusFilter === s ? '#F0FDFE' : 'transparent' }}
                 >
                   {s === 'all' ? t('statusFilter') || 'All' : s}
@@ -138,15 +220,34 @@ export default function Schedule({ setIsSidebarOpen }) {
           )}
         </div>
         <div className="date-selector">
-          <button className="date-nav-btn" onClick={() => setDateIndex(prev => Math.max(0, prev - 1))} style={{ opacity: dateIndex === 0 ? 0.3 : 1 }}>
-            <img src={arrowNavIcon} alt="Previous" style={{ transform: 'rotate(90deg)' }} width="16" height="16" />
+          <button className="date-nav-btn" onClick={() => navigateDate(-1)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
           </button>
-          <div className="date-current">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-            {dateOptions[dateIndex]}
+          <div className="date-current" style={{ position: 'relative', cursor: 'pointer' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="18" height="18"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <span>{formatDateLabel(selectedDate)}</span>
+            <input 
+              type="date" 
+              value={selectedDate.toISOString().split('T')[0]}
+              onChange={(e) => {
+                if(e.target.value) {
+                  setSelectedDate(new Date(e.target.value));
+                  setCurrentPage(1);
+                }
+              }}
+              style={{
+                position: 'absolute',
+                top: 0, left: 0, width: '100%', height: '100%',
+                opacity: 0, cursor: 'pointer'
+              }}
+            />
           </div>
-          <button className="date-nav-btn" onClick={() => setDateIndex(prev => Math.min(dateOptions.length - 1, prev + 1))} style={{ opacity: dateIndex === dateOptions.length - 1 ? 0.3 : 1 }}>
-            <img src={arrowNavIcon} alt="Next" style={{ transform: 'rotate(-90deg)' }} width="16" height="16" />
+          <button className="date-nav-btn" onClick={() => navigateDate(1)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
           </button>
         </div>
       </div>
@@ -181,8 +282,8 @@ export default function Schedule({ setIsSidebarOpen }) {
               {t('loading') || 'Loading...'}
             </div>
           </div>
-        ) : filteredAppointments.map((appt) => (
-          <div className="appointment-card" key={appt.id}>
+        ) : paginatedAppointments.map((appt, idx) => (
+          <div className="appointment-card" key={appt.bookingId || `appt-${idx}`}>
             <div className="card-header">
               <div className="card-patient-info">
                 <img src={avatarImg} alt={appt.name} className="card-avatar" />
@@ -206,12 +307,10 @@ export default function Schedule({ setIsSidebarOpen }) {
             <button
               className={`card-action-btn ${['completed','canceled','cancelled'].includes((appt.status||'').toLowerCase()) ? 'profile' : 'start'}`}
               onClick={() => {
-                console.log('🔍 appt clicked:', appt);
-                console.log('🔍 appt.name:', appt.name);
                 setSelectedChild(appt);
                 setViewMode('patient-details');
                 if (!['completed','canceled','cancelled'].includes((appt.status||'').toLowerCase())) {
-                  setCurrentConsultation({ _id: appt._id });
+                  setCurrentConsultation({ _id: appt._id, bookingId: appt.bookingId });
                 }
               }}
             >
@@ -222,14 +321,48 @@ export default function Schedule({ setIsSidebarOpen }) {
       </div>
 
       <div className="pagination" style={{ marginTop: 0, paddingBottom: 16 }}>
-        <button className="page-btn active">1</button>
-        <button className="page-btn">2</button>
-        <button className="page-btn">3</button>
-        <button className="page-btn">4</button>
-        <button className="page-btn">5</button>
-        <span className="page-dots">..</span>
-        <button className="page-btn">17</button>
-      </div>
+          <button
+            className="page-btn"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            style={{ opacity: currentPage === 1 ? 0.4 : 1 }}
+          >
+            ‹
+          </button>
+          {(() => {
+            const pages = [];
+            const maxVisible = 5;
+            let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+            let end = Math.min(totalPages, start + maxVisible - 1);
+            if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+            if (start > 1) {
+              pages.push(<button key={1} className={`page-btn ${currentPage === 1 ? 'active' : ''}`} onClick={() => setCurrentPage(1)}>1</button>);
+              if (start > 2) pages.push(<span key="dots-start" className="page-dots">..</span>);
+            }
+            for (let i = start; i <= end; i++) {
+              pages.push(
+                <button key={i} className={`page-btn ${currentPage === i ? 'active' : ''}`} onClick={() => setCurrentPage(i)}>{i}</button>
+              );
+            }
+            if (end < totalPages) {
+              if (end < totalPages - 1) pages.push(<span key="dots-end" className="page-dots">..</span>);
+              pages.push(<button key={totalPages} className={`page-btn ${currentPage === totalPages ? 'active' : ''}`} onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>);
+            }
+            return pages;
+          })()}
+          <button
+            className="page-btn"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            style={{ opacity: currentPage === totalPages ? 0.4 : 1 }}
+          >
+            ›
+          </button>
+          <span style={{ marginLeft: '12px', fontSize: '13px', color: '#9CA3AF' }}>
+            {filteredAppointments.length} {t('totalPatients') || 'total'}
+          </span>
+        </div>
     </div>
   );
 
@@ -392,7 +525,7 @@ export default function Schedule({ setIsSidebarOpen }) {
       {viewMode === 'patient-details' && selectedChild ? (
         <div style={{ width: '100%', minHeight: '100vh', background: '#F2F2F2' }}>
           {/* Header with back + complete consultation */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', background: 'white', borderBottom: '1px solid #E5E7EB', position: 'sticky', top: 0, zIndex: 10 }}>
+          <div className="patient-details-header">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 onClick={() => { setSelectedChild(null); setViewMode('schedule'); }}
@@ -403,27 +536,47 @@ export default function Schedule({ setIsSidebarOpen }) {
               <span style={{ color: '#6B7280', fontSize: '14px' }}>{t('schedule')} \</span>
               <span style={{ fontSize: '14px', fontWeight: '600', color: '#111827' }}>{t('startConsultation')}</span>
             </div>
-            {!['completed', 'canceled', 'cancelled'].includes((selectedChild.status || '').toLowerCase()) && (
+            <div className="patient-details-actions">
+              {/* Message Button */}
               <button
-                onClick={async () => {
-                  if (!selectedChild._id) return;
-                  try {
-                    await api.completeConsultation(selectedChild._id);
-                    showToast(t('consultationCompleted') || 'Consultation Completed!');
-                    setSelectedChild(null);
-                    setViewMode('schedule');
-                    // Refresh patients data
-                    setLoadingSchedule(true);
-                    api.getPatients().then(data => { setApiData(data); setLoadingSchedule(false); }).catch(() => setLoadingSchedule(false));
-                  } catch (err) {
-                    showToast(err.message || 'Failed to complete consultation');
-                  }
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    patientName: selectedChild.name || '',
+                    childId: selectedChild.childId || selectedChild._id || '',
+                  });
+                  window.location.href = `/dashboard/messages?${params.toString()}`;
                 }}
-                style={{ background: '#00AEC0', color: 'white', border: 'none', borderRadius: '12px', padding: '10px 20px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
+                className="pd-message-btn"
               >
-                {t('completeConsultation') || 'Complete Consultation'}
+                {t('message') || 'Message'}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/><path d="M7 9h10v2H7zM7 12h7v2H7z"/></svg>
               </button>
-            )}
+
+              {/* Complete Consultation Button */}
+              {!['completed', 'canceled', 'cancelled'].includes((selectedChild.status || '').toLowerCase()) && (
+                <button
+                  onClick={async () => {
+                    const bookingId = selectedChild.bookingId;
+                    if (!bookingId) {
+                      showToast('No booking ID found for this patient');
+                      return;
+                    }
+                    try {
+                      await api.completeConsultation(bookingId);
+                      showToast(t('consultationCompleted') || 'Consultation Completed!');
+                      setSelectedChild(null);
+                      setViewMode('schedule');
+                      refreshData();
+                    } catch (err) {
+                      showToast(err.message || 'Failed to complete consultation');
+                    }
+                  }}
+                  className="pd-complete-btn"
+                >
+                  {t('completeConsultation') || 'Complete Consultation'}
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ overflow: 'auto' }}>
             <PatientDetails
@@ -432,10 +585,13 @@ export default function Schedule({ setIsSidebarOpen }) {
                 id: selectedChild.fileId,
                 age: selectedChild.age,
                 status: selectedChild.status,
-                _id: selectedChild._id || selectedChild.bookingId,
+                _id: selectedChild._id,
+                bookingId: selectedChild.bookingId,
+                childId: selectedChild.childId || selectedChild._id,
               }}
               onClose={() => { setSelectedChild(null); setViewMode('schedule'); }}
               isFullPage={true}
+              hideControls={true}
             />
           </div>
         </div>

@@ -11,16 +11,25 @@ import SuperAdminLogin from './components/SuperAdminLogin.jsx';
 import SuperAdmin from './components/SuperAdmin.jsx';
 
 import { LanguageProvider } from './context/LanguageContext';
+import { NotificationProvider } from './context/NotificationContext';
+
+import { authStorage } from './services/api';
 
 function SuperAdminGuard({ children }) {
-  const isLoggedIn = localStorage.getItem('dana_super_admin') === 'true';
-  return isLoggedIn ? children : <Navigate to="/super-admin-login" replace />;
+  const isLoggedIn = authStorage.isSuperAdminLoggedIn();
+  if (!isLoggedIn) {
+    // Clear any stale flags
+    authStorage.clearSuperAdmin();
+    return <Navigate to="/super-admin-login" replace />;
+  }
+  return children;
 }
 
 function App() {
   return (
     <LanguageProvider>
-      <Routes>
+      <NotificationProvider>
+        <Routes>
         <Route path="/dashboard/*" element={<Dashboard />} />
         <Route path="/super-admin/*" element={
           <SuperAdminGuard>
@@ -48,6 +57,7 @@ function App() {
           </div>
         } />
       </Routes>
+      </NotificationProvider>
     </LanguageProvider>
   );
 }

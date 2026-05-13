@@ -9,6 +9,7 @@ export default defineConfig({
       '/api': {
         target: 'https://rhostdev.qzz.io',
         changeOrigin: true,
+        secure: false,
         rewrite: (path) => path.replace(/^\/api/, '/api'),
       }
     }

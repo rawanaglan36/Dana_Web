@@ -9,11 +9,15 @@ import { io } from 'socket.io-client';
 const SOCKET_URL = 'https://rhostdev.qzz.io/';
 
 export default function Messages({ setIsSidebarOpen }) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [activeChat, setActiveChat] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [messageInput, setMessageInput] = useState('');
+  const [toastMsg, setToastMsg] = useState('');
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
+
+  const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
   const [contacts, setContacts] = useState([]);
   const [chatMessages, setChatMessages] = useState({});
   const [loadingContacts, setLoadingContacts] = useState(true);
@@ -23,6 +27,10 @@ export default function Messages({ setIsSidebarOpen }) {
   const fileInputRef = useRef(null);
   const socketRef = useRef(null);
   const doctorId = authStorage.getDoctorId();
+
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
 
   useEffect(() => {
     if (!doctorId) return;
@@ -47,6 +55,17 @@ export default function Messages({ setIsSidebarOpen }) {
 
     socket.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
+    });
+
+    // Confirmation of room join
+    socket.on('joinedRoom', (data) => {
+      console.log('Joined Room:', data);
+    });
+
+    // Track online users
+    socket.on('getUsers', (users) => {
+      console.log('Online Users:', users);
+      setOnlineUsers(Array.isArray(users) ? users : []);
     });
 
     // Listen for incoming messages
@@ -74,6 +93,37 @@ export default function Messages({ setIsSidebarOpen }) {
         if (data.senderId !== doctorId && data._id) {
           api.markMessageDelivered(data._id).catch(() => {});
         }
+
+        // Update contact snippet and unread badge for messages not in active chat
+        if (data.senderId !== doctorId) {
+          setContacts(prev => prev.map(c => {
+            if (c.roomId === data.roomId || c.parentId === data.senderId) {
+              return { ...c, snippet: data.message, unread: true, time: 'Just now', timestamp: Date.now() };
+            }
+            return c;
+          }));
+        }
+      }
+    });
+
+    // Listen for notifications
+    socket.on('getNotification', (data) => {
+      console.log('Notification received in Chat:', data);
+      const isMessage = data.type === 'message' || 
+                        data.type === 'MESSAGE' || 
+                        data.type === 'chat' ||
+                        (data.title && data.title.toLowerCase().includes('message')) ||
+                        (data.body && data.body.toLowerCase().includes('message'));
+      
+      if (isMessage) {
+        setNotifications(prev => [{
+          id: Date.now(),
+          title: data.title || 'New Message',
+          body: data.body || data.message || '',
+          time: new Date().toISOString(),
+          read: false,
+          senderId: data.senderId || '',
+        }, ...prev]);
       }
     });
 
@@ -129,6 +179,7 @@ export default function Messages({ setIsSidebarOpen }) {
             roomId: null,
             snippet: parent.lastBookingDate ? `Last visit: ${parent.lastBookingDate}` : 'No messages yet',
             time: parent.lastBookingDate || '',
+            timestamp: parent.lastBookingDate ? new Date(parent.lastBookingDate).getTime() : 0,
             unread: false,
             age: parent.children[0]?.age,
           };
@@ -158,6 +209,21 @@ export default function Messages({ setIsSidebarOpen }) {
     }
     loadContacts();
   }, []);
+
+  const handleDeleteMessage = async (msgId, roomId) => {
+    // Optimistically remove from UI
+    setChatMessages(prev => {
+      const roomMsgs = prev[roomId] || [];
+      return { ...prev, [roomId]: roomMsgs.filter(m => m._id !== msgId) };
+    });
+
+    try {
+      await api.deleteMessage(msgId);
+    } catch (err) {
+      console.warn('Backend message delete failed or not implemented:', err.message);
+      // Optional: show Toast
+    }
+  };
 
   // ========== JOIN ROOM & LOAD MESSAGES WHEN CHAT IS OPENED ==========
   const openChat = useCallback(async (contact) => {
@@ -274,6 +340,7 @@ export default function Messages({ setIsSidebarOpen }) {
           roomId: null,
           snippet: 'New conversation',
           time: 'Now',
+          timestamp: Date.now(),
           unread: false,
           age: '',
         };
@@ -314,6 +381,7 @@ export default function Messages({ setIsSidebarOpen }) {
       message: messageInput.trim(),
       parentId: activeChat.parentId,
       doctorId: doctorId,
+      type: 'TEXT',
     };
 
     console.log('📤 Sending message:', msgPayload);
@@ -342,10 +410,10 @@ export default function Messages({ setIsSidebarOpen }) {
       [roomId]: [...(prev[roomId] || []), localMsg],
     }));
 
-    // Update snippet in contact list
+    // Update snippet in contact list and set timestamp to sort newest
     setContacts(prev => prev.map(c =>
       c.id === activeChat.id
-        ? { ...c, snippet: messageInput.trim(), time: 'Just now' }
+        ? { ...c, snippet: messageInput.trim(), time: 'Just now', timestamp: Date.now() }
         : c
     ));
 
@@ -387,10 +455,10 @@ export default function Messages({ setIsSidebarOpen }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages, activeChat]);
 
-  // Filter contacts by search
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter contacts by search and sort by newest first
+  const filteredContacts = [...contacts]
+    .filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   // ========== FORMAT TIME ==========
   const formatMessageTime = (dateStr) => {
@@ -420,9 +488,76 @@ export default function Messages({ setIsSidebarOpen }) {
           <h2>{t('chats')}</h2>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {socketConnected && (
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} title="Connected" />
-          )}
+          {/* Notification Bell */}
+          <div style={{ position: 'relative' }}>
+            <button
+              className="add-chat-btn"
+              title="Notifications"
+              onClick={() => setShowNotifications(p => !p)}
+              style={{ position: 'relative' }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              {notifications.filter(n => !n.read).length > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-4px', right: '-4px',
+                  background: '#EF4444', color: '#fff', borderRadius: '50%',
+                  width: '16px', height: '16px', fontSize: '10px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700',
+                }}>
+                  {notifications.filter(n => !n.read).length}
+                </span>
+              )}
+            </button>
+            {/* Notification Dropdown */}
+            {showNotifications && (
+              <div style={{
+                position: 'absolute', top: '110%', right: '0', width: '280px',
+                maxWidth: 'calc(100vw - 32px)',
+                background: '#fff', border: '1px solid #E5E7EB', borderRadius: '12px',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 200, maxHeight: '350px', overflow: 'auto',
+              }}>
+                <div style={{ padding: '12px 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#111827' }}>Notifications</h4>
+                  {notifications.length > 0 && (
+                    <button
+                      onClick={() => setNotifications(prev => prev.map(n => ({ ...n, read: true })))}
+                      style={{ background: 'none', border: 'none', fontSize: '12px', color: '#00AEC0', cursor: 'pointer', fontWeight: '600' }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '24px 16px', textAlign: 'center', color: '#9CA3AF', fontSize: '13px' }}>
+                    No notifications
+                  </div>
+                ) : (
+                  notifications.map(n => (
+                    <div
+                      key={n.id}
+                      onClick={() => setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, read: true } : item))}
+                      style={{
+                        padding: '10px 16px', borderBottom: '1px solid #F9FAFB', cursor: 'pointer',
+                        background: n.read ? 'transparent' : '#F0FDFE',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>🔔</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.title}</p>
+                          <p style={{ margin: 0, fontSize: '12px', color: '#6B7280', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.body}</p>
+                        </div>
+                        <span style={{ fontSize: '10px', color: '#9CA3AF', whiteSpace: 'nowrap' }}>{formatMessageTime(n.time)}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           <button className="add-chat-btn" title="New Chat">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
@@ -509,14 +644,49 @@ export default function Messages({ setIsSidebarOpen }) {
           ) : (
             messages.map((msg, idx) => {
               const isSent = msg.senderId === doctorId;
+              const msgId = msg._id || idx;
               return (
-                <div className={`message-row ${isSent ? 'sent' : 'received'}`} key={msg._id || idx}>
+                <div 
+                  className={`message-row ${isSent ? 'sent' : 'received'}`} 
+                  key={msgId}
+                  onMouseEnter={() => isSent && setHoveredMessageId(msgId)}
+                  onMouseLeave={() => isSent && setHoveredMessageId(null)}
+                >
                   <div className="message-meta">
                     {!isSent && <span className="message-sender">{activeChat.name}</span>}
                     <span className="message-time">{formatMessageTime(msg.createdAt)}</span>
                     {isSent && <span className="message-sender">{t('you') || 'You'}</span>}
                   </div>
-                  <div className="message-bubble">{msg.message}</div>
+                  <div className="message-bubble" style={{ position: 'relative' }}>
+                    {msg.message}
+                    {isSent && hoveredMessageId === msgId && (
+                      <button
+                        onClick={() => handleDeleteMessage(msgId, activeChat.roomId)}
+                        style={{
+                          position: 'absolute',
+                          top: '-8px',
+                          left: isRTL ? '-8px' : 'auto',
+                          right: isRTL ? 'auto' : '-8px',
+                          background: '#EF4444',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: '20px',
+                          height: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          padding: 0,
+                          zIndex: 10,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        }}
+                        title={t('delete') || 'Delete'}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    )}
+                  </div>
                   {isSent && (
                     <div style={{ alignSelf: 'flex-end', fontSize: '10px', color: '#9CA3AF', marginTop: '-2px' }}>
                       {msg.readAt ? '✓✓' : msg.deliveredAt ? '✓✓' : '✓'}

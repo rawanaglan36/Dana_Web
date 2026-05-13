@@ -83,12 +83,17 @@ export default function RightSidebar() {
   // Map the patients to display based on API response
   const displayPatients = useMemo(() => {
     const colors = ['#ffb3a7', '#a7d8ff', '#ffd6a7', '#a7ffb1', '#dca7ff', '#ffeca7'];
-    
+
+    // Helper: normalize date to YYYY-MM-DD for comparison
+    const normalizeDate = (d) => d ? d.split('T')[0] : '';
+
+    // Build a lookup: time -> booking info for the selected date
+    const dateBookings = rawBookings.filter(b => normalizeDate(b.date) === formattedDateString);
+
     if (slotsData?.bookedTimes && slotsData.bookedTimes.length > 0) {
-      // Build a lookup: time -> booking info for the selected date
       const bookingsByTime = {};
-      rawBookings.forEach(b => {
-        if (b.date === formattedDateString && b.time) {
+      dateBookings.forEach(b => {
+        if (b.time) {
           bookingsByTime[b.time] = {
             name: b.childId?.childName || '',
             age: b.childId?.birthDate 
@@ -98,6 +103,7 @@ export default function RightSidebar() {
             parentId: b.parentId?._id || b.parentId || '',
             bookingId: b._id,
             status: b.status,
+            endTime: b.endTime || '',
           };
         }
       });
@@ -107,7 +113,8 @@ export default function RightSidebar() {
         const match = bookingsByTime[timeStr];
         const name = match?.name || (typeof bt === 'object' ? (bt.name || bt.patientName || '') : '') || `Patient ${i+1}`;
         const age = match?.age != null ? `${match.age} Years` : (typeof bt === 'object' && bt.age ? `${bt.age} Years` : 'N/A');
-        const time = `${timeStr} - Booked`;
+        const endTime = match?.endTime || '';
+        const time = endTime ? `${timeStr} - ${endTime}` : `${timeStr}`;
         return {
           name,
           age,
@@ -118,17 +125,42 @@ export default function RightSidebar() {
           bookingId: match?.bookingId || '',
         };
       });
+    } else if (dateBookings.length > 0) {
+      // Use bookings filtered by selected date
+      return dateBookings.map((b, i) => {
+        const childName = b.childId?.childName || '';
+        const birthDate = b.childId?.birthDate;
+        const age = birthDate
+          ? Math.floor((Date.now() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+          : null;
+        const endTime = b.endTime || '';
+        const time = b.time ? (endTime ? `${b.time} - ${endTime}` : b.time) : '';
+        return {
+          name: childName || `Patient ${i+1}`,
+          age: age != null ? `${age} Years` : 'N/A',
+          time,
+          color: colors[i % colors.length],
+          childId: b.childId?._id || '',
+          parentId: b.parentId?._id || b.parentId || '',
+          bookingId: b._id,
+        };
+      });
     } else if (patientsList.length > 0) {
-      // Fallback: Just show patients from the general list
-      return patientsList.map((p, i) => ({
-        name: p.name || p.childName || `Patient ${i+1}`,
-        age: p.age ? `${p.age} Years` : 'N/A',
-        time: p.time || '10:00 AM - 10:30 AM',
-        color: colors[i % colors.length],
-        childId: p.childId || '',
-        parentId: p.parentId || '',
-        childRecordID: p.childRecordID || '',
-      }));
+      // Last fallback: show patients that have a matching booking date
+      return patientsList
+        .filter(p => {
+          const pDate = normalizeDate(p.lastBookingDate || '');
+          return pDate === formattedDateString;
+        })
+        .map((p, i) => ({
+          name: p.name || p.childName || `Patient ${i+1}`,
+          age: p.age ? `${p.age} Years` : 'N/A',
+          time: p.time || '',
+          color: colors[i % colors.length],
+          childId: p.childId || '',
+          parentId: p.parentId || '',
+          childRecordID: p.childRecordID || '',
+        }));
     }
     
     return []; // Empty if no data
@@ -183,7 +215,11 @@ export default function RightSidebar() {
 
       <div className="right-schedule-header">
         <h3>{t('scheduleLabel')}</h3>
-        <div className="time-filter">10:00 AM - 03:00 PM</div>
+        <div className="time-filter">
+          {slotsData?.availableTimes?.length > 0
+            ? `${slotsData.availableTimes[0]} - ${slotsData.availableTimes[slotsData.availableTimes.length - 1]}`
+            : displayPatients.length > 0 ? `${displayPatients.length} appointments` : 'No slots'}
+        </div>
       </div>
 
       <div className="patient-list">

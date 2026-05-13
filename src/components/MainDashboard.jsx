@@ -4,10 +4,13 @@ import profile2userIcon from '../assets/Dana - ضنا_icon/vuesax copy/bold/prof
 import line6Icon from '../assets/Dana - ضنا_icon/Line 6.svg';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
+import NotificationBell from './NotificationBell';
+import { useNotifications } from '../context/NotificationContext';
 
 export default function MainDashboard({ setIsSidebarOpen }) {
   const navigate = useNavigate();
   const { t, toggleLanguage, language, isRTL } = useLanguage();
+  const { doctorInitial, doctorProfilePic } = useNotifications();
   const [toastMsg, setToastMsg] = useState('');
   const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
 
@@ -88,13 +91,10 @@ export default function MainDashboard({ setIsSidebarOpen }) {
           <button className="icon-btn" style={{ fontWeight: 'bold' }} onClick={toggleLanguage} title={isRTL ? 'Switch to English' : 'التبديل للعربية'}>
             {language === 'en' ? 'عربي' : 'En'}
           </button>
-          <button className="icon-btn notification-btn" onClick={() => showToast(t('noNotifications'))}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-              <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-            </svg>
-          </button>
-          <div className="avatar" onClick={() => navigate('/dashboard/settings')} style={{ cursor: 'pointer' }} title={t('settings')}>A</div>
+          <NotificationBell />
+          <div className="avatar" onClick={() => navigate('/dashboard/settings')} style={{ cursor: 'pointer', overflow: 'hidden' }} title={t('settings')}>
+            {doctorProfilePic ? <img src={doctorProfilePic} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : doctorInitial}
+          </div>
         </div>
       </header>
 
