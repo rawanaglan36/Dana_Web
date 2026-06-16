@@ -63,7 +63,7 @@ const getDoctorId = () => authStorage.getDoctorId();
 
 // Helper to build auth headers
 const getAuthHeaders = (extra = {}, useSuperAdmin = false) => {
-  const token = useSuperAdmin ? SUPER_ADMIN_TOKEN : authStorage.getToken();
+  const token = useSuperAdmin ? (authStorage.getSuperAdminToken() || SUPER_ADMIN_TOKEN) : authStorage.getToken();
   const headers = { ...extra };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
