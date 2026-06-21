@@ -6,7 +6,9 @@ import { useLanguage } from '../context/LanguageContext';
 import { api, authStorage } from '../services/api';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'https://rhostdev.qzz.io/';
+const SOCKET_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://localhost:5173'
+  : 'https://rhostdev.qzz.io/';
 
 export default function Messages({ setIsSidebarOpen }) {
   const { t, isRTL } = useLanguage();
@@ -44,33 +46,23 @@ export default function Messages({ setIsSidebarOpen }) {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log(' Socket connected:', socket.id);
       setSocketConnected(true);
     });
 
     socket.on('disconnect', () => {
-      console.log(' Socket disconnected');
       setSocketConnected(false);
     });
 
-    socket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message);
-    });
+    socket.on('connect_error', () => {});
 
-    // Confirmation of room join
-    socket.on('joinedRoom', (data) => {
-      console.log('Joined Room:', data);
-    });
+    socket.on('joinedRoom', () => {});
 
-    // Track online users
     socket.on('getUsers', (users) => {
-      console.log('Online Users:', users);
       setOnlineUsers(Array.isArray(users) ? users : []);
     });
 
     // Listen for incoming messages
     socket.on('getMessage', (data) => {
-      console.log(' Received message:', data);
       if (data.roomId) {
         const newMsg = {
           _id: data._id || Date.now().toString(),
@@ -108,7 +100,6 @@ export default function Messages({ setIsSidebarOpen }) {
 
     // Listen for notifications
     socket.on('getNotification', (data) => {
-      console.log('Notification received in Chat:', data);
       const isMessage = data.type === 'message' || 
                         data.type === 'MESSAGE' || 
                         data.type === 'chat' ||
@@ -203,9 +194,8 @@ export default function Messages({ setIsSidebarOpen }) {
           }
         } catch {}
       } catch (err) {
-        console.error('Failed to load contacts:', err);
+
       }
-      setLoadingContacts(false);
     }
     loadContacts();
   }, []);
@@ -220,7 +210,7 @@ export default function Messages({ setIsSidebarOpen }) {
     try {
       await api.deleteMessage(msgId);
     } catch (err) {
-      console.warn('Backend message delete failed or not implemented:', err.message);
+
       // Optional: show Toast
     }
   };
@@ -231,7 +221,7 @@ export default function Messages({ setIsSidebarOpen }) {
     setShowProfile(false);
     setLoadingMessages(true);
 
-    console.log('💬 Opening chat for:', contact.name, contact);
+
 
     try {
       let roomId = contact.roomId;
@@ -239,23 +229,23 @@ export default function Messages({ setIsSidebarOpen }) {
       
       // Step 1: Try to create/get conversation by booking
       if (!roomId && contact.bookingId) {
-        console.log('📞 Creating conversation with bookingId:', contact.bookingId);
+
         try {
           const convData = await api.createConversationByBooking(contact.bookingId);
-          console.log('📞 Conversation response:', convData);
+
           if (convData?.roomId) {
             roomId = convData.roomId;
             parentId = convData.parentId || parentId;
           }
         } catch (err) {
-          console.warn('⚠️ createConversationByBooking failed:', err.message);
+
         }
       }
 
       // Step 2: Fallback - build roomId from parentId + doctorId
       if (!roomId && parentId && doctorId) {
         roomId = `${parentId}_${doctorId}`;
-        console.log('🔧 Built roomId from parentId+doctorId:', roomId);
+
       }
 
       // Update activeChat and contacts with the roomId
@@ -271,15 +261,15 @@ export default function Messages({ setIsSidebarOpen }) {
             userId: doctorId,
             roomId: roomId,
           });
-          console.log('🏠 Joined room:', roomId);
+
         } else {
-          console.warn('⚠️ Socket not connected, cannot join room');
+
         }
 
         // Step 4: Load existing messages
         try {
           const messages = await api.getMessagesByRoom(roomId);
-          console.log('📨 Loaded messages:', messages?.length || 0);
+
           if (Array.isArray(messages)) {
             setChatMessages(prev => ({ ...prev, [roomId]: messages }));
             
@@ -291,14 +281,14 @@ export default function Messages({ setIsSidebarOpen }) {
             });
           }
         } catch (err) {
-          console.warn('⚠️ getMessagesByRoom failed:', err.message);
+
           setChatMessages(prev => ({ ...prev, [roomId]: [] }));
         }
       } else {
-        console.error('❌ Cannot open chat: no roomId could be determined');
+
       }
     } catch (err) {
-      console.error('❌ Failed to open chat:', err);
+
     }
     setLoadingMessages(false);
   }, [doctorId]);
@@ -317,7 +307,7 @@ export default function Messages({ setIsSidebarOpen }) {
 
     if (patientName || parentId) {
       setAutoOpenHandled(true);
-      console.log('🔗 Auto-opening chat from URL params:', { patientName, parentId, childId, bookingId });
+
 
       // Try to find existing contact
       const existing = contacts.find(c => 
@@ -360,16 +350,16 @@ export default function Messages({ setIsSidebarOpen }) {
     if (!roomId && activeChat.parentId && doctorId) {
       roomId = `${activeChat.parentId}_${doctorId}`;
       setActiveChat(prev => ({ ...prev, roomId }));
-      console.log('🔧 Built roomId for sending:', roomId);
+
     }
 
     if (!roomId) {
-      console.error('❌ Cannot send: no roomId available. activeChat:', activeChat);
+
       return;
     }
 
     if (!socketRef.current?.connected) {
-      console.warn('⚠️ Socket not connected, message will be sent when reconnected');
+
       // Still add it locally for now
     }
 
@@ -384,13 +374,13 @@ export default function Messages({ setIsSidebarOpen }) {
       type: 'TEXT',
     };
 
-    console.log('📤 Sending message:', msgPayload);
+
     if (socketRef.current?.connected) {
       // Make sure we're in the room
       socketRef.current.emit('joinRoom', { userId: doctorId, roomId });
       socketRef.current.emit('sendMessage', msgPayload);
     } else {
-      console.warn('⚠️ Socket disconnected, message saved locally only');
+
     }
 
     // Optimistic UI: add message locally

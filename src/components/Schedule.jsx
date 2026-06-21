@@ -1,16 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import './Schedule.css';
 import PatientDetails from './PatientDetails';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 
 import languageIcon from '../assets/Dana - ضنا_icon/Language Icon.svg';
-import notificationIcon from '../assets/Dana - ضنا_icon/Notification Icon.svg';
-import badgeIcon from '../assets/Dana - ضنا_icon/Badge.svg';
 import avatarImg from '../assets/Dana - ضنا_img/source/image.png';
 import chevronIcon from '../assets/Dana - ضنا_icon/Table/Tags/Icon.svg';
 import emptyStateImg from '../assets/Dana - ضنا_img/_Empty state item.png';
-import arrowNavIcon from '../assets/Dana - ضنا_icon/vuesax copy 2/outline/arrow-down.svg';
 import NotificationBell from './NotificationBell';
 import { useNotifications } from '../context/NotificationContext';
 
@@ -22,7 +19,7 @@ export default function Schedule({ setIsSidebarOpen }) {
 
   const [rawBookings, setRawBookings] = useState([]);
 
-  const refreshData = () => {
+  const refreshData = useCallback(() => {
     setLoadingSchedule(true);
     Promise.all([
       api.getPatients().catch(() => null),
@@ -32,18 +29,21 @@ export default function Schedule({ setIsSidebarOpen }) {
       setRawBookings(Array.isArray(bData) ? bData : []);
       setLoadingSchedule(false);
     }).catch(() => setLoadingSchedule(false));
-  };
+  }, []);
 
   useEffect(() => { refreshData(); }, []);
 
   // Build a patient lookup from the patients API for enriching booking data
-  const patientsLookup = {};
-  (apiData?.patients ?? []).forEach(p => {
-    if (p.childId) patientsLookup[p.childId] = p;
-  });
+  const patientsLookup = useMemo(() => {
+    const lookup = {};
+    (apiData?.patients ?? []).forEach(p => {
+      if (p.childId) lookup[p.childId] = p;
+    });
+    return lookup;
+  }, [apiData]);
 
   // Build appointments from ALL bookings (not just one per child)
-  const appointments = rawBookings.map((b) => {
+  const appointments = useMemo(() => rawBookings.map((b) => {
     const childId = b.childId?._id || b.childId || '';
     const patientInfo = patientsLookup[childId] || {};
     const childName = b.childId?.childName || patientInfo.childName || patientInfo.name || 'Unknown';
@@ -62,7 +62,7 @@ export default function Schedule({ setIsSidebarOpen }) {
       bookingId: b._id,
       childId: childId,
     };
-  });
+  }), [rawBookings, patientsLookup]);
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -105,23 +105,20 @@ export default function Schedule({ setIsSidebarOpen }) {
   const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
 
   // Filter by date first, then by status
-  const dateFilteredAppointments = appointments.filter(a => {
-    if (!a.date) return false; // Skip bookings without a date
-    // Compare YYYY-MM-DD format
-    const apptDate = a.date.split('T')[0]; // Handle ISO dates
+  const dateFilteredAppointments = useMemo(() => appointments.filter(a => {
+    if (!a.date) return false;
+    const apptDate = a.date.split('T')[0];
     return apptDate === selectedDateStr;
-  });
+  }), [appointments, selectedDateStr]);
 
-  const filteredAppointments = statusFilter === 'all'
+  const filteredAppointments = useMemo(() => statusFilter === 'all'
     ? dateFilteredAppointments
     : dateFilteredAppointments.filter(a => {
         const qStatus = statusFilter.toLowerCase();
         const itemStatus = (a.status || '').toLowerCase();
-        if (qStatus === 'waiting') {
-          return itemStatus === 'pending' || itemStatus === 'waiting';
-        }
+        if (qStatus === 'waiting') return itemStatus === 'pending' || itemStatus === 'waiting';
         return itemStatus === qStatus;
-      });
+      }), [dateFilteredAppointments, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAppointments.length / itemsPerPage));
   const paginatedAppointments = filteredAppointments.slice(

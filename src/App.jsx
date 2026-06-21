@@ -18,9 +18,25 @@ import { authStorage } from './services/api';
 function SuperAdminGuard({ children }) {
   const isLoggedIn = authStorage.isSuperAdminLoggedIn();
   if (!isLoggedIn) {
-    // Clear any stale flags
     authStorage.clearSuperAdmin();
     return <Navigate to="/super-admin-login" replace />;
+  }
+  return children;
+}
+
+function DoctorGuard({ children }) {
+  const token = authStorage.getToken();
+  if (!token) return <Navigate to="/" replace />;
+  // Check if JWT is expired
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now()) {
+      authStorage.clear();
+      return <Navigate to="/" replace />;
+    }
+  } catch {
+    authStorage.clear();
+    return <Navigate to="/" replace />;
   }
   return children;
 }
@@ -30,7 +46,7 @@ function App() {
     <LanguageProvider>
       <NotificationProvider>
         <Routes>
-        <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="/dashboard/*" element={<DoctorGuard><Dashboard /></DoctorGuard>} />
         <Route path="/super-admin/*" element={
           <SuperAdminGuard>
             <div className="dashboard-layout">

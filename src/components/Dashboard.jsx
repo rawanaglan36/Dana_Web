@@ -7,6 +7,7 @@ import Patients from './Patients';
 import Schedule from './Schedule';
 import Messages from './Messages';
 import Settings from './Settings';
+import { authStorage } from '../services/api';
 import '../Dashboard.css';
 
 export default function Dashboard() {
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = () => {
+    authStorage.clear();
     navigate('/');
   };
 
