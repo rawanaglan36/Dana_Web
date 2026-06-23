@@ -8,7 +8,7 @@ export function NotificationProvider({ children }) {
   const [globalSocket, setGlobalSocket] = useState(null);
   const [dashboardNotifications, setDashboardNotifications] = useState([]);
   const [dashboardUnreadCount, setDashboardUnreadCount] = useState(0);
-  const [doctorInitial, setDoctorInitial] = useState('A');
+  const [doctorInitial, setDoctorInitial] = useState('');
   const [doctorProfilePic, setDoctorProfilePic] = useState(null);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function NotificationProvider({ children }) {
     const doctorId = authStorage.getDoctorId();
     if (!doctorId) return;
 
-    const newSocket = io('https://dana-server-n3l2.onrender.com');
+    const newSocket = io('https://rhostdev.qzz.io');
     setGlobalSocket(newSocket);
 
     newSocket.emit('setup', doctorId);

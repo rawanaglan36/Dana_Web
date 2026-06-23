@@ -83,10 +83,8 @@ export default function ApplyToJoin() {
         file: selectedFile,
       });
 
-      console.log('✅ Doctor created:', doctor);
       navigate('/done');
     } catch (err) {
-      console.error('❌ Signup failed:', err);
       setApiError(err.message || t('signupFailed'));
     } finally {
       setIsSubmitting(false);

@@ -93,8 +93,6 @@ export const api = {
       formData.append('file', file);
     }
 
-    console.log('📤 createDoctor payload:', doctorData);
-
     const res = await fetch(`${API_BASE}/v1/doctor`, {
       method: 'POST',
       body: formData,
@@ -170,24 +168,20 @@ export const api = {
       authStorage.setToken(json.accessToken.access_token);
     }
 
-    console.log('🔐 verifySignIn full response:', JSON.stringify(json, null, 2));
-
     // Try to extract doctorId from response data first (most reliable)
     const responseData = json.response?.data || json.data || {};
     const doctorIdFromResponse = responseData.doctorId || responseData._id || responseData.id;
 
     if (doctorIdFromResponse) {
       authStorage.setDoctorId(doctorIdFromResponse);
-      console.log('✅ DoctorId from response data:', doctorIdFromResponse);
     } else if (json.accessToken?.access_token) {
       try {
         const payload = JSON.parse(atob(json.accessToken.access_token.split('.')[1]));
         if (payload.sub) {
           authStorage.setDoctorId(payload.sub);
-          console.log('ℹ️ DoctorId from JWT sub:', payload.sub);
         }
       } catch (e) {
-        console.error('Failed to parse JWT payload', e);
+        // Silent fail on JWT parse error
       }
     }
     return json;
@@ -286,13 +280,13 @@ export const api = {
     return json.response?.response?.data?.record || json.response?.data?.record || null;
   },
 
-  // Bookings - GET /v1/booking?doctorId=:doctorId
+  // Bookings - GET /v1/booking/doctorAppointment/:doctorId
   async getBookings() {
-    const res = await fetch(`${API_BASE}/v1/booking?doctorId=${getDoctorId()}`, {
+    const res = await fetch(`${API_BASE}/v1/booking/doctorAppointment/${getDoctorId()}`, {
       headers: getAuthHeaders(),
     });
     const json = await res.json();
-    return json.data || json.response?.data || [];
+    return json.response?.data || json.data || [];
   },
 
   // Patients List - POST
@@ -355,7 +349,6 @@ export const api = {
       }));
       return progress;
     } catch (e) {
-      console.error('Error fetching skills progress:', e);
       return [];
     }
   },

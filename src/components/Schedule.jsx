@@ -44,20 +44,30 @@ export default function Schedule({ setIsSidebarOpen }) {
 
   // Build appointments from ALL bookings (not just one per child)
   const appointments = useMemo(() => rawBookings.map((b) => {
-    const childId = b.childId?._id || b.childId || '';
+    const childObj = typeof b.childId === 'object' ? b.childId : {};
+    const childId = childObj._id || b.childId || '';
     const patientInfo = patientsLookup[childId] || {};
-    const childName = b.childId?.childName || patientInfo.childName || patientInfo.name || 'Unknown';
-    const childAge = b.childId?.birthDate
-      ? Math.floor((Date.now() - new Date(b.childId.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-      : (patientInfo.age ?? '');
+    const childName = childObj.childName || patientInfo.childName || patientInfo.name || 'Unknown';
+    const childAge = childObj.age ?? (childObj.birthDate
+      ? Math.floor((Date.now() - new Date(childObj.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      : (patientInfo.age ?? ''));
+
+    // Subtract one day to correct backend UTC offset issue
+    let localDate = b.date || '';
+    if (localDate) {
+      const d = new Date(localDate + 'T12:00:00Z');
+      d.setDate(d.getDate() - 1);
+      localDate = d.toISOString().split('T')[0];
+    }
+
     return {
       id: patientInfo.childRecordID || b._id,
       name: childName,
       age: childAge,
       time: b.time || '',
-      date: b.date || patientInfo.lastBookingDate || '',
-      fileId: `#${(patientInfo.childRecordID || b._id || '').slice(-6)}`,
-      status: b.status || patientInfo.bookingStatus || '',
+      date: localDate,
+      fileId: `#${(b._id || '').slice(-6)}`,
+      status: b.status || '',
       _id: childId || b._id,
       bookingId: b._id,
       childId: childId,
@@ -107,7 +117,10 @@ export default function Schedule({ setIsSidebarOpen }) {
   // Filter by date first, then by status
   const dateFilteredAppointments = useMemo(() => appointments.filter(a => {
     if (!a.date) return false;
-    const apptDate = a.date.split('T')[0];
+    // Handle both "YYYY-MM-DD" and ISO format, compare as local date string
+    const apptDate = a.date.includes('T') 
+      ? a.date.split('T')[0]  // ISO format
+      : a.date;               // already YYYY-MM-DD
     return apptDate === selectedDateStr;
   }), [appointments, selectedDateStr]);
 

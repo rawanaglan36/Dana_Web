@@ -122,7 +122,7 @@ export default function OTP() {
 
   const showSuccess = (msg) => {
     // Simple way to show temporary success, you could add a toast here
-    console.log(msg);
+    if (process.env.NODE_ENV === 'development') console.log(msg);
   };
 
   const handleSubmit = async (e) => {
@@ -142,11 +142,9 @@ export default function OTP() {
 
       setIsSubmitting(true);
       try {
-        const result = await api.verifySignIn({ phone, otp: code });
-        console.log('✅ OTP verified:', result);
+        await api.verifySignIn({ phone, otp: code });
         navigate('/dashboard'); // Go straight to dashboard on login
       } catch (err) {
-        console.error('❌ OTP verification failed:', err);
         setError(err.message || 'OTP verification failed');
       } finally {
         setIsSubmitting(false);

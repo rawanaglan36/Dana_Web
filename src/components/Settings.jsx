@@ -17,6 +17,8 @@ export default function Settings({ setIsSidebarOpen }) {
   const [activeTab, setActiveTab] = useState('profile');
   const [isSaving, setIsSaving] = useState(false);
   const [isTabsMenuOpen, setIsTabsMenuOpen] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(''), 3000); };
 
   // Warning Modal States
   const [showWarningModal, setShowWarningModal] = useState(false);
@@ -95,15 +97,16 @@ export default function Settings({ setIsSidebarOpen }) {
 
   // ✅ Profile data state — linked to both header and form
   const [profileData, setProfileData] = useState({
-    fullName: 'Hager Mohamed Abdelftah',
-    specialization: 'dentist',
-    clinicAddress: 'Not specified',
-    consultationFee: '0 EGP',
-    phone: '01113209809',
+    fullName: '',
+    specialization: '',
+    clinicAddress: '',
+    consultationFee: '',
+    phone: '',
     bio: '',
     isVerified: false,
     profileImage: null,
   });
+  const [profileLoading, setProfileLoading] = useState(true);
 
   const updateProfile = (field, value) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
@@ -118,7 +121,7 @@ export default function Settings({ setIsSidebarOpen }) {
         setProfileData(prev => ({ ...prev, profileImage: result.profileImage }));
       }
     } catch (err) {
-      console.error('Failed to upload profile image', err);
+      showToast('Failed to upload profile image');
     }
   };
 
@@ -134,6 +137,7 @@ export default function Settings({ setIsSidebarOpen }) {
             consultationFee: data.detectionPrice !== undefined ? `${data.detectionPrice} EGP` : '',
             phone: data.phone || '',
             bio: data.bio || '',
+            profileImage: data.profileImage || null,
           });
           setNotifications({
             appointmentNotification: data.appointmentNotification ?? false,
@@ -204,7 +208,7 @@ export default function Settings({ setIsSidebarOpen }) {
           }
         }
       } catch (err) {
-        console.error('Failed to load doctor profile', err);
+        // Silent fail on initial load
       }
     }
     loadDoctorData();
@@ -264,6 +268,24 @@ export default function Settings({ setIsSidebarOpen }) {
   };
 
   const handleSave = async () => {
+    if (activeTab === 'profile') {
+      if (!profileData.fullName.trim()) {
+        showToast('Full name is required');
+        return;
+      }
+      if (!profileData.specialization.trim()) {
+        showToast('Specialization is required');
+        return;
+      }
+      if (!profileData.clinicAddress.trim()) {
+        showToast('Clinic address is required');
+        return;
+      }
+      if (!profileData.consultationFee.trim()) {
+        showToast('Consultation fee is required');
+        return;
+      }
+    }
     setIsSaving(true);
     try {
       if (activeTab === 'profile') {
@@ -274,9 +296,7 @@ export default function Settings({ setIsSidebarOpen }) {
           detectionPrice: parseInt(profileData.consultationFee) || 0,
           bio: profileData.bio
         };
-        console.log('Sending profile payload:', payload);
-        const result = await api.updateDoctorProfile(payload);
-        console.log('Profile update result:', result);
+        await api.updateDoctorProfile(payload);
       } else if (activeTab === 'notifications') {
         await api.updateDoctorNotifications(notifications);
       } else if (activeTab === 'availability') {
@@ -355,7 +375,7 @@ export default function Settings({ setIsSidebarOpen }) {
             return; // Early return to show modal
           }
         } catch (err) {
-          console.warn('Could not check bookings:', err);
+          // Silent fail - proceed with save if bookings check fails
         }
         setLoadingBookings(false);
         
@@ -363,7 +383,7 @@ export default function Settings({ setIsSidebarOpen }) {
         await api.updateDoctorAppointments(payload);
       }
     } catch (err) {
-      console.error('Error saving settings:', err);
+      showToast('Failed to save settings');
     }
     setTimeout(() => setIsSaving(false), 2000);
   };
@@ -389,7 +409,6 @@ export default function Settings({ setIsSidebarOpen }) {
               .map(b => b._id),
       };
       
-      console.log('Saving availability with cancellation:', cancellationData);
       await api.updateDoctorAppointments(cancellationData);
       
       // Reset modal state
@@ -397,7 +416,7 @@ export default function Settings({ setIsSidebarOpen }) {
       setCancelEntireDay(false);
       setSelectedCancelSlots([]);
     } catch (err) {
-      console.error('Error saving availability:', err);
+      showToast('Failed to save availability');
     }
     setTimeout(() => setIsSaving(false), 2000);
   };
@@ -778,6 +797,12 @@ export default function Settings({ setIsSidebarOpen }) {
           </div>
         </div>,
         document.body
+      )}
+
+      {toastMsg && (
+        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: '#1E293B', color: 'white', padding: '12px 24px', borderRadius: '100px', fontSize: '14px', fontWeight: '500', boxShadow: '0 10px 25px rgba(0,0,0,0.2)', zIndex: 9999 }}>
+          {toastMsg}
+        </div>
       )}
     </div>
   );

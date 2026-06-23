@@ -60,7 +60,6 @@ export default function SuperAdminLogin() {
 
       navigate('/super-admin');
     } catch (err) {
-      console.error('❌ Login failed:', err);
       setApiError(err.message || 'Login failed');
       setIsSubmitting(false);
     }

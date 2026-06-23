@@ -6,9 +6,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { api, authStorage } from '../services/api';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost'
-  ? 'http://localhost:5173'
-  : 'https://rhostdev.qzz.io/';
+const SOCKET_URL = 'https://rhostdev.qzz.io/';
 
 export default function Messages({ setIsSidebarOpen }) {
   const { t, isRTL } = useLanguage();
@@ -76,8 +74,15 @@ export default function Messages({ setIsSidebarOpen }) {
         };
         setChatMessages(prev => {
           const existing = prev[data.roomId] || [];
-          // Avoid duplicates
+          // Avoid duplicates by server ID
           if (existing.find(m => m._id === newMsg._id)) return prev;
+          // If it's our own message coming back from socket, replace the local optimistic version
+          if (data.senderId === doctorId) {
+            const withoutLocal = existing.filter(m => !String(m._id).startsWith('local-'));
+            if (existing.find(m => String(m._id).startsWith('local-') && m.message === newMsg.message)) {
+              return { ...prev, [data.roomId]: [...withoutLocal, newMsg] };
+            }
+          }
           return { ...prev, [data.roomId]: [...existing, newMsg] };
         });
 
@@ -115,6 +120,19 @@ export default function Messages({ setIsSidebarOpen }) {
           read: false,
           senderId: data.senderId || '',
         }, ...prev]);
+      }
+    });
+
+    // Listen for message deletion events from other clients
+    socket.on('messageDeleted', (data) => {
+      if (data.messageId && data.roomId) {
+        setChatMessages(prev => {
+          const roomMsgs = prev[data.roomId] || [];
+          return { 
+            ...prev, 
+            [data.roomId]: roomMsgs.filter(m => m._id !== data.messageId) 
+          };
+        });
       }
     });
 
@@ -194,24 +212,49 @@ export default function Messages({ setIsSidebarOpen }) {
           }
         } catch {}
       } catch (err) {
-
+        // silent fail
+      } finally {
+        setLoadingContacts(false);
       }
     }
     loadContacts();
   }, []);
 
   const handleDeleteMessage = async (msgId, roomId) => {
-    // Optimistically remove from UI
+    // Check if this is a local optimistic message (not synced yet)
+    if (String(msgId).startsWith('local-')) {
+      // Just remove from UI
+      setChatMessages(prev => {
+        const roomMsgs = prev[roomId] || [];
+        return { ...prev, [roomId]: roomMsgs.filter(m => m._id !== msgId) };
+      });
+      return;
+    }
+
+    // Optimistically remove from UI FIRST for instant feedback
     setChatMessages(prev => {
       const roomMsgs = prev[roomId] || [];
       return { ...prev, [roomId]: roomMsgs.filter(m => m._id !== msgId) };
     });
 
     try {
+      // Then try to delete from backend
       await api.deleteMessage(msgId);
-    } catch (err) {
 
-      // Optional: show Toast
+      // Notify via socket to update other clients
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('messageDeleted', { 
+          messageId: msgId, 
+          roomId,
+          senderId: doctorId 
+        });
+      }
+      
+      showToast(t('messageDeleted') || 'Message deleted');
+    } catch (err) {
+      // If backend delete fails, show error but message is already gone from UI
+      // User can refresh to see if it's really deleted or not
+      showToast(err.message || 'Delete may have failed - refresh to verify');
     }
   };
 
@@ -256,14 +299,13 @@ export default function Messages({ setIsSidebarOpen }) {
         ));
 
         // Step 3: Join the socket room
+        const joinRoom = () => {
+          socketRef.current?.emit('joinRoom', { userId: doctorId, roomId });
+        };
         if (socketRef.current?.connected) {
-          socketRef.current.emit('joinRoom', {
-            userId: doctorId,
-            roomId: roomId,
-          });
-
+          joinRoom();
         } else {
-
+          socketRef.current?.once('connect', joinRoom);
         }
 
         // Step 4: Load existing messages
@@ -271,6 +313,7 @@ export default function Messages({ setIsSidebarOpen }) {
           const messages = await api.getMessagesByRoom(roomId);
 
           if (Array.isArray(messages)) {
+            // Always trust the backend as source of truth
             setChatMessages(prev => ({ ...prev, [roomId]: messages }));
             
             // Mark unread messages as read
@@ -281,7 +324,6 @@ export default function Messages({ setIsSidebarOpen }) {
             });
           }
         } catch (err) {
-
           setChatMessages(prev => ({ ...prev, [roomId]: [] }));
         }
       } else {
@@ -651,7 +693,11 @@ export default function Messages({ setIsSidebarOpen }) {
                     {msg.message}
                     {isSent && hoveredMessageId === msgId && (
                       <button
-                        onClick={() => handleDeleteMessage(msgId, activeChat.roomId)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteMessage(msgId, activeChat.roomId);
+                        }}
+                        onMouseDown={(e) => e.stopPropagation()}
                         style={{
                           position: 'absolute',
                           top: '-8px',
@@ -661,17 +707,18 @@ export default function Messages({ setIsSidebarOpen }) {
                           color: 'white',
                           border: 'none',
                           borderRadius: '50%',
-                          width: '20px',
-                          height: '20px',
+                          width: '22px',
+                          height: '22px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           cursor: 'pointer',
                           padding: 0,
-                          zIndex: 10,
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          zIndex: 100,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                         }}
                         title={t('delete') || 'Delete'}
+                        aria-label="Delete message"
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                       </button>

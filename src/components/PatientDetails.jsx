@@ -33,7 +33,6 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
     const childId = patient?.childId || patient?._id;
     if (!childId) return;
     setLoading(true);
-    console.log('📊 PatientDetails fetching data for childId:', childId);
 
     // Fetch all data in parallel
     Promise.all([
@@ -48,12 +47,6 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
       // Skills progress (aggregates all categories)
       api.getChildSkillsProgress(childId).catch(() => []),
     ]).then(([record, growth, latest, vaccineDefs, skills]) => {
-      console.log('📊 Child record:', record);
-      console.log('📊 Growth:', growth);
-      console.log('📊 Latest:', latest);
-      console.log('📊 Vaccine defs:', vaccineDefs?.length);
-      console.log('📊 Skills:', skills);
-
       setRecordData(record);
       setVaccineDefinitions(Array.isArray(vaccineDefs) ? vaccineDefs : []);
 
@@ -74,7 +67,6 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
       if (record?.childId) setRealChildId(typeof record.childId === 'string' ? record.childId : record.childId._id || record.childId);
       setLoading(false);
     }).catch((err) => {
-      console.log('❌ PatientDetails fetch error:', err);
       setLoading(false);
     });
   }, [patient]);
@@ -147,7 +139,6 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              console.log('🔙 Back button clicked, calling onClose');
               if (onClose) {
                 onClose();
               }
@@ -206,15 +197,12 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
                     alert('No booking ID found for this patient');
                     return;
                   }
-                  console.log('🔄 Completing consultation for bookingId:', bookingId);
                   try {
-                    const result = await api.completeConsultation(bookingId);
-                    console.log('✅ Consultation completed:', result);
+                    await api.completeConsultation(bookingId);
                     alert(t('consultationCompleted') || 'Consultation Completed!');
                     // Close and let parent refresh
                     if (onClose) onClose();
                   } catch (err) {
-                    console.error('❌ Consultation error:', err);
                     alert(err.message || 'Failed to complete consultation');
                   }
                 }}
