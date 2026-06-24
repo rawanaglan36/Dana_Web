@@ -12,6 +12,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 import NotificationBell from './NotificationBell';
 import { useNotifications } from '../context/NotificationContext';
+import { calculateAge, formatAge } from '../utils/ageUtils';
 
 export default function Patients({ setIsSidebarOpen }) {
   const { t, toggleLanguage, language } = useLanguage();
@@ -53,7 +54,8 @@ export default function Patients({ setIsSidebarOpen }) {
     return {
       name: p.childName || 'Unknown',
       id: p.childRecordID ? `#${p.childRecordID.slice(-6)}` : (p.childId ? `#${p.childId.slice(-6)}` : '—'),
-      age: p.age ?? 0,
+      age: p.birthDate ? calculateAge(p.birthDate) : (p.age ?? null),
+      birthDate: p.birthDate || null,
       lastVisit: p.lastBookingDate || booking.date || '',
       status: p.bookingStatus === 'completed' ? 'Active' : 'Pending',
       _id: p.childRecordID,
@@ -172,7 +174,11 @@ export default function Patients({ setIsSidebarOpen }) {
                   <tr key={idx}>
                     <td className="patient-name">{patient.name}</td>
                     <td className="file-id">{patient.id}</td>
-                    <td>{patient.age}</td>
+                    <td>{patient.age
+                      ? (typeof patient.age === 'object'
+                          ? formatAge(patient.age, { yr: t('yr') || 'yr', mo: t('mo') || 'mo' })
+                          : `${patient.age} ${t('yr') || 'yr'}`)
+                      : '—'}</td>
                     <td>{patient.lastVisit}</td>
                     <td>
                       <span className={`status-badge ${patient.status === 'Active' ? 'status-active' : 'status-overdue'}`}>

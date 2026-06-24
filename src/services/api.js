@@ -308,6 +308,16 @@ export const api = {
     return json.response?.data || null;
   },
 
+  // Child Profile - GET /v1/child/:childId  (returns birthDate, gender, etc.)
+  async getChildProfile(childId) {
+    if (!childId) return null;
+    const res = await fetch(`${API_BASE}/v1/child/${childId}`, {
+      headers: getAuthHeaders(),
+    });
+    const json = await res.json();
+    return json.response?.data || json.data || null;
+  },
+
   // Child Growth Records - GET /v1/child/:childId/growth
   async getChildGrowth(childId) {
     const res = await fetch(`${API_BASE}/v1/child/${childId}/growth`, {

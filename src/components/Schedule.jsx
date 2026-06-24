@@ -3,6 +3,7 @@ import './Schedule.css';
 import PatientDetails from './PatientDetails';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
+import { calculateAge, formatAge } from '../utils/ageUtils';
 
 import languageIcon from '../assets/Dana - ضنا_icon/Language Icon.svg';
 import avatarImg from '../assets/Dana - ضنا_img/source/image.png';
@@ -48,9 +49,10 @@ export default function Schedule({ setIsSidebarOpen }) {
     const childId = childObj._id || b.childId || '';
     const patientInfo = patientsLookup[childId] || {};
     const childName = childObj.childName || patientInfo.childName || patientInfo.name || 'Unknown';
-    const childAge = childObj.age ?? (childObj.birthDate
-      ? Math.floor((Date.now() - new Date(childObj.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-      : (patientInfo.age ?? ''));
+    const birthDate = childObj.birthDate || patientInfo.birthDate || null;
+    const childAge = birthDate
+      ? calculateAge(birthDate)
+      : (childObj.age ?? patientInfo.age ?? null);
 
     // Subtract one day to correct backend UTC offset issue
     let localDate = b.date || '';
@@ -64,6 +66,7 @@ export default function Schedule({ setIsSidebarOpen }) {
       id: patientInfo.childRecordID || b._id,
       name: childName,
       age: childAge,
+      birthDate: birthDate,
       time: b.time || '',
       date: localDate,
       fileId: `#${(b._id || '').slice(-6)}`,
@@ -299,7 +302,11 @@ export default function Schedule({ setIsSidebarOpen }) {
                 <img src={avatarImg} alt={appt.name} className="card-avatar" />
                 <div className="card-patient-text">
                   <h4>{appt.name}</h4>
-                  <span>{appt.age ? `${appt.age} ${t('years') || 'yrs'}` : ''}</span>
+                  <span>{appt.age
+                    ? (typeof appt.age === 'object'
+                        ? formatAge(appt.age, { yr: t('yr') || 'yr', mo: t('mo') || 'mo' })
+                        : `${appt.age} ${t('years') || 'yrs'}`)
+                    : ''}</span>
                 </div>
               </div>
               <span className={`card-status ${String(appt.status).toLowerCase()}`}>{getStatusTranslation(appt.status)}</span>
@@ -594,6 +601,7 @@ export default function Schedule({ setIsSidebarOpen }) {
                 name: selectedChild.name,
                 id: selectedChild.fileId,
                 age: selectedChild.age,
+                birthDate: selectedChild.birthDate || null,
                 status: selectedChild.status,
                 _id: selectedChild._id,
                 bookingId: selectedChild.bookingId,

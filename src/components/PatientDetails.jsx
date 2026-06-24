@@ -6,11 +6,13 @@ import bodyFigure from '../assets/Dana - ضنا_img/image 13.png';
 import injectionIcon from '../assets/Dana - ضنا_icon/mingcute_injection-fill.svg';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
+import { calculateAge, formatAge } from '../utils/ageUtils';
 
 export default function PatientDetails({ patient, onClose, triggerPosition, isFullPage, hideControls }) {
   const { t } = useLanguage();
 
   const [recordData, setRecordData] = useState(null);
+  const [childProfile, setChildProfile] = useState(null);
   const [growthData, setGrowthData] = useState([]);
   const [latestGrowth, setLatestGrowth] = useState(null);
   const [vaccinations, setVaccinations] = useState([]);
@@ -38,6 +40,8 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
     Promise.all([
       // Primary: Get child record by childId (GET endpoint)
       api.getChildRecordByChildId(childId).catch(() => null),
+      // Child profile (for birthDate)
+      api.getChildProfile(childId).catch(() => null),
       // Growth history
       api.getChildGrowth(childId).catch(() => []),
       // Latest growth
@@ -46,8 +50,9 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
       api.getAllVaccinations().catch(() => []),
       // Skills progress (aggregates all categories)
       api.getChildSkillsProgress(childId).catch(() => []),
-    ]).then(([record, growth, latest, vaccineDefs, skills]) => {
+    ]).then(([record, profile, growth, latest, vaccineDefs, skills]) => {
       setRecordData(record);
+      setChildProfile(profile);
       setVaccineDefinitions(Array.isArray(vaccineDefs) ? vaccineDefs : []);
 
       // Growth data: prefer record data, fallback to individual API
@@ -84,7 +89,28 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
 
   const childInfo = recordData?.childData ?? {};
   const gender = childInfo.gender || patient.gender || '';
-  const age = childInfo.age ?? patient.age ?? '';
+
+  // Try to get birthDate from any available source
+  const rawBirthDate =
+    childProfile?.birthDate ||
+    childProfile?.dateOfBirth ||
+    childInfo.birthDate ||
+    childInfo.dateOfBirth ||
+    patient.birthDate ||
+    patient.dateOfBirth ||
+    null;
+
+  // If we have a real birthDate → precise years+months
+  // If we only have an integer age → show years only (can't know months)
+  const ageObj = rawBirthDate
+    ? calculateAge(rawBirthDate)
+    : null;
+
+  const fallbackAge = childInfo.age ?? patient.age ?? null;
+
+  const ageDisplay = ageObj
+    ? formatAge(ageObj, { yr: t('yr') || 'yr', mo: t('mo') || 'mo' })
+    : (fallbackAge != null ? `${fallbackAge} ${t('years') || 'years'}` : '');
 
   // Build vaccine name lookup map from definitions
   const vaccineNameMap = {};
@@ -180,7 +206,7 @@ export default function PatientDetails({ patient, onClose, triggerPosition, isFu
               <img src={avatarImg} alt={patient.name} className="pd-avatar" />
               <div className="pd-header-info">
                 <h2>{patient.name}</h2>
-                <span>{age ? `${age} ${t('years') || 'years'}` : ''}</span>
+                <span>{ageDisplay}</span>
                 <div className="pd-badges-row">
                   <span className="pd-gender-tag">{gender === 'female' ? t('girl') || 'Girl' : t('boy')}</span>
                   <span className="pd-status-tag">{t('healthyGrowth')}</span>

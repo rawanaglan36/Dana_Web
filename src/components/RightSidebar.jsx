@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import { api } from '../services/api';
 import emptyStateImg from '../assets/Dana - ضنا_img/_Empty state item.png';
+import { calculateAge, formatAge } from '../utils/ageUtils';
 
 export default function RightSidebar() {
   const { t } = useLanguage();
@@ -96,8 +97,8 @@ export default function RightSidebar() {
         if (b.time) {
           bookingsByTime[b.time] = {
             name: b.childId?.childName || '',
-            age: b.childId?.birthDate 
-              ? Math.floor((Date.now() - new Date(b.childId.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+            age: b.childId?.birthDate
+              ? calculateAge(b.childId.birthDate)
               : null,
             childId: b.childId?._id || '',
             parentId: b.parentId?._id || b.parentId || '',
@@ -112,7 +113,12 @@ export default function RightSidebar() {
         const timeStr = typeof bt === 'string' ? bt : (bt.time || '');
         const match = bookingsByTime[timeStr];
         const name = match?.name || (typeof bt === 'object' ? (bt.name || bt.patientName || '') : '') || `Patient ${i+1}`;
-        const age = match?.age != null ? `${match.age} Years` : (typeof bt === 'object' && bt.age ? `${bt.age} Years` : 'N/A');
+        const ageVal = match?.age;
+        const age = ageVal != null
+          ? (typeof ageVal === 'object'
+              ? formatAge(ageVal, { yr: 'yr', mo: 'mo' })
+              : `${ageVal} Years`)
+          : (typeof bt === 'object' && bt.age ? `${bt.age} Years` : 'N/A');
         const endTime = match?.endTime || '';
         const time = endTime ? `${timeStr} - ${endTime}` : `${timeStr}`;
         return {
@@ -130,14 +136,15 @@ export default function RightSidebar() {
       return dateBookings.map((b, i) => {
         const childName = b.childId?.childName || '';
         const birthDate = b.childId?.birthDate;
-        const age = birthDate
-          ? Math.floor((Date.now() - new Date(birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-          : null;
+        const ageObj = birthDate ? calculateAge(birthDate) : null;
+        const age = ageObj != null
+          ? formatAge(ageObj, { yr: 'yr', mo: 'mo' })
+          : 'N/A';
         const endTime = b.endTime || '';
         const time = b.time ? (endTime ? `${b.time} - ${endTime}` : b.time) : '';
         return {
           name: childName || `Patient ${i+1}`,
-          age: age != null ? `${age} Years` : 'N/A',
+          age,
           time,
           color: colors[i % colors.length],
           childId: b.childId?._id || '',

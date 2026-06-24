@@ -156,6 +156,8 @@ const translations = {
     boy: "Boy",
     healthyGrowth: "confident and growing healthily",
     yearsAndMonths: "3 years and 2 months",
+    yr: "yr",
+    mo: "mo",
 
     // Messages
     chats: "Chats",
@@ -382,6 +384,8 @@ const translations = {
     boy: "ولد",
     healthyGrowth: "واثق وينمو بصحة",
     yearsAndMonths: "3 سنوات وشهرين",
+    yr: "سنة",
+    mo: "شهر",
 
     // Messages
     chats: "المحادثات",
